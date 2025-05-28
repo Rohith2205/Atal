@@ -16,9 +16,12 @@ class AuthController extends GetxController{
   Future<void> onInit() async {
     // TODO: implement onInit
     super.onInit();
-    AuthUser user = await Amplify.Auth.getCurrentUser();
-    userName.value = user.username;
+    // AuthUser user = await Amplify.Auth.getCurrentUser();
+    // userName.value = user.username;
     var attribs = await Amplify.Auth.fetchUserAttributes();
+    email.value = attribs[0].value;
+    phoneNumber.value = attribs[2].value;
+    userName.value = attribs[4].value;
     for (final element in attribs) {
       safePrint('key: ${element.userAttributeKey}; value: ${element.value}');
     }
