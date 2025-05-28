@@ -8,7 +8,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../utils/routes.dart';
+import '../components/Bottomnavbar.dart';
+import '../components/appdrawer.dart';
 
 
 class MainScreen extends StatefulWidget {
@@ -92,99 +93,6 @@ class MainScreenState extends State<MainScreen> {
           selectedIndex: _selectedIndex,
           onTappedItem: _onItemTapped,
         ),
-      ),
-    );
-  }
-}
-
-class BottomNavbarWidget extends StatelessWidget {
-  const BottomNavbarWidget({
-    super.key,
-    required this.selectedIndex,
-    required this.onTappedItem,
-  });
-
-  final int selectedIndex;
-  final void Function(int)? onTappedItem;
-
-  @override
-  Widget build(BuildContext context) {
-    return BottomNavigationBar(
-      backgroundColor: Colors.blue,
-      showSelectedLabels: true,
-      showUnselectedLabels: true,
-      type: BottomNavigationBarType.fixed,
-      selectedItemColor: Colors.white,
-      // unselectedItemColor: Colors.blueGrey,
-      items: const <BottomNavigationBarItem>[
-        BottomNavigationBarItem(
-          icon: ImageIcon(AssetImage('assets/icons/Checklist.png')),
-          label: 'Attendance',
-        ),
-        BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-        BottomNavigationBarItem(
-          icon: ImageIcon(AssetImage('assets/icons/Books.png'), size: 40),
-          label: 'Resources',
-        ),
-      ],
-      currentIndex: selectedIndex,
-      onTap: onTappedItem,
-    );
-  }
-}
-
-class AppDrawerWidget extends StatelessWidget {
-  const AppDrawerWidget({super.key, required this.authController});
-  final AuthController authController;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: MediaQuery.of(context).size.height,
-      child: ListView(
-        children: <Widget>[
-          DrawerHeader(
-            padding: const EdgeInsets.only(left: 15, top: 15),
-            margin: EdgeInsets.only(bottom: 15),
-            decoration: BoxDecoration(color: Colors.blue),
-
-            // height: MediaQuery.of(context).size.height/4.5,
-            // width: MediaQuery.of(context).size.width,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Obx(()=>CircleAvatar(
-                  backgroundColor: authController.profileColor.value,
-                  radius: 45,
-                  child: Center(
-                    child: Text(
-                      'M',
-                      style: TextStyle(color: Colors.white, fontSize: 60),
-                    ),
-                  ),
-                )),
-                Text(
-                  'Hello, Mahesh...',
-                  style: TextStyle(color: Colors.white, fontSize: 30),
-                ),
-              ],
-            ),
-          ),
-          ListTile(
-            onTap: (){
-              Get.back(closeOverlays: true);
-              Get.toNamed('${Routes.HOME}${Routes.JOINTEAM}');
-              // Navigator.of(context).push(MaterialPageRoute(builder: (context) => JoinTeamscreen()));
-              },
-            title: Text(
-              'Team',
-              style: TextStyle(fontSize: 24, color: Color(0xFF49454F)),
-            ),
-            // selected: true,
-            // tileColor: Color(0xFFE6E6E6),
-          ),
-        ],
       ),
     );
   }
