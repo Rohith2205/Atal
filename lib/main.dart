@@ -109,7 +109,6 @@ class MyApp extends StatelessWidget {
           theme: ThemeData(colorSchemeSeed: Colors.blue),
       debugShowCheckedModeBanner: false,
       builder: Authenticator.builder(),
-      home: MainScreen()
     ));
   }
 }

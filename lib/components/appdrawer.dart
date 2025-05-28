@@ -1,3 +1,5 @@
+import 'package:amplify_authenticator/amplify_authenticator.dart';
+import 'package:atl_membership/components/logoutdialog.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/AuthController.dart';
@@ -10,7 +12,7 @@ class AppDrawerWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: MediaQuery.of(context).size.height,
+      height: Get.height,
       child: ListView(
         children: <Widget>[
           DrawerHeader(
@@ -41,7 +43,22 @@ class AppDrawerWidget extends StatelessWidget {
               ],
             ),
           ),
+          AppdrawerTile(tileName: 'Profile', routeName: ''),
           AppdrawerTile(tileName: 'Team',routeName: '${Routes.HOME}${Routes.JOINTEAM}'),
+          AppdrawerTile(tileName: 'Achievements', routeName: ''),
+          AppdrawerTile(tileName: 'About', routeName: ''),
+          AppdrawerTile(tileName: 'Policies', routeName: ''),
+          AppdrawerTile(tileName: 'Help & Support', routeName: ''),
+          AppdrawerTile(tileName: 'Grievances', routeName: ''),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 100.0,vertical: 20),
+            child: OutlinedButton(onPressed: ()=>{
+              Get.back(closeOverlays: true),
+              logoutDialog(authController,context)
+            },
+                style:OutlinedButton.styleFrom(backgroundColor: Colors.blue),
+    child: Text('Logout',style: TextStyle(color: Colors.white),)) ,
+          )
         ],
       ),
     );
