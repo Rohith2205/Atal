@@ -86,7 +86,7 @@ class MainScreenState extends State<MainScreen> {
             ),
           ],
         ),
-        drawer: Drawer(child: AppDrawerWidget(color: _authController.profileColor.value)),
+        drawer: Drawer(child: AppDrawerWidget(authController: _authController,)),
         body: widgetOptions.elementAt(_selectedIndex),
         bottomNavigationBar: BottomNavbarWidget(
           selectedIndex: _selectedIndex,
@@ -134,9 +134,8 @@ class BottomNavbarWidget extends StatelessWidget {
 }
 
 class AppDrawerWidget extends StatelessWidget {
-  const AppDrawerWidget({super.key, required Color? this.color});
-
-  final Color? color;
+  const AppDrawerWidget({super.key, required this.authController});
+  final AuthController authController;
 
   @override
   Widget build(BuildContext context) {
@@ -155,8 +154,8 @@ class AppDrawerWidget extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  backgroundColor: color,
+                Obx(()=>CircleAvatar(
+                  backgroundColor: authController.profileColor.value,
                   radius: 45,
                   child: Center(
                     child: Text(
@@ -164,7 +163,7 @@ class AppDrawerWidget extends StatelessWidget {
                       style: TextStyle(color: Colors.white, fontSize: 60),
                     ),
                   ),
-                ),
+                )),
                 Text(
                   'Hello, Mahesh...',
                   style: TextStyle(color: Colors.white, fontSize: 30),
