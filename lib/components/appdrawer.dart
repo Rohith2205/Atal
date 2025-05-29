@@ -37,7 +37,9 @@ class AppDrawerWidget extends StatelessWidget {
                   ),
                 )),
                 Text(
-                  'Hello, Mahesh...',
+                  'Hello, ${
+                  authController.userName
+                  }',
                   style: TextStyle(color: Colors.white, fontSize: 30),
                 ),
               ],
