@@ -31,7 +31,7 @@ class AppDrawerWidget extends StatelessWidget {
                   radius: 45,
                   child: Center(
                     child: Text(
-                      'M',
+                      authController.userName.value[0],
                       style: TextStyle(color: Colors.white, fontSize: 60),
                     ),
                   ),
@@ -39,8 +39,8 @@ class AppDrawerWidget extends StatelessWidget {
                 Text(
                   'Hello, ${
                   authController.userName
-                  }',
-                  style: TextStyle(color: Colors.white, fontSize: 30),
+                  }', overflow: TextOverflow.ellipsis, maxLines: 1,
+                  style: TextStyle(color: Colors.white, fontSize: 30,),
                 ),
               ],
             ),
