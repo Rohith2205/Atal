@@ -4,6 +4,7 @@ import 'package:atl_membership/screens/homescreen.dart';
 import 'package:atl_membership/screens/resourcesscreen.dart';
 import 'package:atl_membership/screens/jointeamscreen.dart';
 import 'package:atl_membership/screens/teamscreen.dart';
+import 'package:elegant_notification/elegant_notification.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -41,7 +42,7 @@ class MainScreenState extends State<MainScreen> {
   final List<Widget> widgetOptions = const [
     Attendancescreen(),
     Homescreen(),
-    ResourcesScreen(),
+    Resourcesscreen(),
     JoinTeamscreen(),
     Teamscreen()
   ];
@@ -79,7 +80,11 @@ class MainScreenState extends State<MainScreen> {
           ),
           actions: [
             IconButton(
-              onPressed: () => {},
+              onPressed: () => {
+                ElegantNotification(
+                  description: Text("No Notifications"),
+                ).show(context)
+              },
               icon: ImageIcon(
                 AssetImage('assets/icons/notification.png'),
                 color: Colors.white,

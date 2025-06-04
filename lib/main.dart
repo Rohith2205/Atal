@@ -1,11 +1,19 @@
 import 'package:amplify_authenticator/amplify_authenticator.dart';
+import 'package:atl_membership/screens/aboutscreen.dart';
+import 'package:atl_membership/screens/achievementsscreen.dart';
 import 'package:atl_membership/screens/attendancescreen.dart';
+import 'package:atl_membership/screens/help_support.dart';
 import 'package:atl_membership/screens/homescreen.dart';
 import 'package:atl_membership/screens/mainscreen.dart';
+import 'package:atl_membership/screens/profilescreen.dart';
 import 'package:atl_membership/screens/resourcesscreen.dart';
 import 'package:atl_membership/screens/jointeamscreen.dart';
+import 'package:atl_membership/screens/schoolscreen.dart';
+import 'package:atl_membership/screens/suggestionscreen.dart';
 import 'package:atl_membership/screens/teamscreen.dart';
 import 'package:atl_membership/utils/routes.dart';
+import 'package:device_preview/device_preview.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:amplify_flutter/amplify_flutter.dart';
 import 'package:amplify_auth_cognito/amplify_auth_cognito.dart';
@@ -22,7 +30,10 @@ void main() async{
     );
     WidgetsFlutterBinding.ensureInitialized();
     await _configureAmplify();
-    runApp(const MyApp());
+    runApp( DevicePreview(
+      enabled: !kReleaseMode,
+      builder: (context)=>MyApp(),
+    ));
   } on AmplifyException catch (e) {
     runApp(Text("Error configuring Amplify: ${e.message}"));
   }
@@ -100,9 +111,15 @@ class MyApp extends StatelessWidget {
             children: [
               GetPage(name: Routes.ATTENDANCE, page: ()=>Attendancescreen()),
               GetPage(name: Routes.HOME, page: ()=>Homescreen()),
-              GetPage(name: Routes.RESOURCES, page: ()=>ResourcesScreen()),
+              GetPage(name: Routes.RESOURCES, page: ()=>Resourcesscreen()),
               GetPage(name: Routes.JOINTEAM, page: ()=>JoinTeamscreen()),
-              GetPage(name: Routes.TEAM, page: ()=>Teamscreen())
+              GetPage(name: Routes.TEAM, page: ()=>Teamscreen()),
+              GetPage(name: Routes.PROFILE, page: ()=>Profilescreen()),
+              GetPage(name: Routes.ABOUT, page: ()=>Aboutscreen()),
+              GetPage(name: Routes.SCHOOL, page: ()=>Schoolscreen()),
+              GetPage(name: Routes.ACHIEVEMENTS, page: ()=>Achievementsscreen()),
+              GetPage(name: Routes.SUGGESTION, page: ()=>Suggestionscreen()),
+              GetPage(name: Routes.HELP, page: ()=>HelpSupportscreen()),
             ]
             ),
           ],
