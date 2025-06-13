@@ -7,12 +7,79 @@ specifies that any unauthenticated user can "create", "read", "update",
 and "delete" any "Todo" records.
 =========================================================================*/
 const schema = a.schema({
-  Todo: a
-    .model({
-      content: a.string(),
-    })
-    .authorization((allow) => [allow.guest()]),
+
+  UserTable: a.model({
+    id: a.id(),
+    name: a.string(),
+    reg_no: a.string(),
+    email: a.email(),
+    phone: a.string(),
+    device_id: a.string(),
+    university: a.string(),
+    district: a.string(),
+    mandal: a.string(),
+    college: a.string(),
+    team_code: a.id(),
+    isPolicy: a.boolean().default(false),
+    gender: a.enum(['MALE', 'FEMALE', 'OTHER']),
+    branch: a.string(),
+    attendance : a.hasMany('attendanceTable','user_id'),
+    suggestion: a.hasMany('SuggestionsTable','user_id'),
+    team: a.belongsTo('TeamTable','team_code')
+  }).authorization((allow) => [allow.guest()]),
+
+  attendanceTable: a.model({
+    user_id: a.id(),
+    user: a.belongsTo('UserTable','user_id'),
+    longitude: a.float(),
+    latitude: a.float(),
+    no_of_boys: a.integer(),
+    no_of_girls: a.integer(),
+    total: a.integer(),
+    teachers: a.integer(),
+    photo: a.string(),
+    start_time: a.time(),
+    end_time: a.time(),
+    class_attended: a.json(),
+    module_name: a.string(),
+    module_no: a.integer(),
+    remarks: a.string(),
+    timestamp: a.timestamp(),
+    topics_covered: a.string()
+  }).authorization((allow) => [allow.guest()]),
+
+  TeamTable: a.model({
+    team_code: a.id(),
+    team_members: a.json(),
+    school_name: a.string(),
+    district: a.string(),
+    mandal: a.string(),
+    schoolUID: a.integer(),
+    modules: a.json(),
+    user: a.hasMany('UserTable','team_code')
+  }).authorization((allow) => [allow.guest()]),
+
+  SuggestionsTable: a.model({
+    user_id:a.id(),
+    user:a.belongsTo('UserTable','user_id',),
+    suggestionID: a.integer(),
+    type: a.string(),
+    concern: a.string(),
+    photo: a.string(),
+    schoolUID: a.integer(),
+  }).authorization((allow) => [allow.guest()]),
+
+  ResourceTable: a.model({
+    moduleID: a.integer().required(),
+    module_no: a.integer(),
+    module_name: a.string(),
+    url: a.string(),
+    module_photo: a.string(),
+    isValid: a.boolean(),
+    teamID_list: a.json()
+  }).authorization((allow) => [allow.guest()])
 });
+
 
 export type Schema = ClientSchema<typeof schema>;
 
