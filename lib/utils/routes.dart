@@ -10,5 +10,6 @@ abstract class Routes {
   static const ACHIEVEMENTS ='/achievements';
   static const SUGGESTION = '/suggestion';
   static const HELP ='/help';
+  static const PERSONAL='/personal';
 // Add other routes as needed
 }
