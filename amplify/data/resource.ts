@@ -9,7 +9,7 @@ and "delete" any "Todo" records.
 const schema = a.schema({
 
   UserTable: a.model({
-    id: a.id(),
+    id: a.string().required(),
     name: a.string(),
     reg_no: a.string(),
     email: a.email(),
@@ -26,10 +26,10 @@ const schema = a.schema({
     attendance : a.hasMany('attendanceTable','user_id'),
     suggestion: a.hasMany('SuggestionsTable','user_id'),
     team: a.belongsTo('TeamTable','team_code')
-  }).authorization((allow) => [allow.guest()]),
+  }).authorization((allow) => [allow.guest(),allow.authenticated()]),
 
   attendanceTable: a.model({
-    user_id: a.id(),
+      user_id : a.string(),
     user: a.belongsTo('UserTable','user_id'),
     longitude: a.float(),
     latitude: a.float(),
@@ -46,7 +46,7 @@ const schema = a.schema({
     remarks: a.string(),
     timestamp: a.timestamp(),
     topics_covered: a.string()
-  }).authorization((allow) => [allow.guest()]),
+  }).authorization((allow) => [allow.guest(),allow.authenticated()]),
 
   TeamTable: a.model({
     team_code: a.id(),
@@ -57,17 +57,17 @@ const schema = a.schema({
     schoolUID: a.integer(),
     modules: a.json(),
     user: a.hasMany('UserTable','team_code')
-  }).authorization((allow) => [allow.guest()]),
+  }).authorization((allow) => [allow.guest(),allow.authenticated()]),
 
   SuggestionsTable: a.model({
-    user_id:a.id(),
+    user_id:a.string(),
     user:a.belongsTo('UserTable','user_id',),
     suggestionID: a.integer(),
     type: a.string(),
     concern: a.string(),
     photo: a.string(),
     schoolUID: a.integer(),
-  }).authorization((allow) => [allow.guest()]),
+  }).authorization((allow) => [allow.guest(),allow.authenticated()]),
 
   ResourceTable: a.model({
     moduleID: a.integer().required(),
@@ -77,7 +77,7 @@ const schema = a.schema({
     module_photo: a.string(),
     isValid: a.boolean(),
     teamID_list: a.json()
-  }).authorization((allow) => [allow.guest()])
+  }).authorization((allow) => [allow.guest(),allow.authenticated()])
 });
 
 
@@ -86,7 +86,7 @@ export type Schema = ClientSchema<typeof schema>;
 export const data = defineData({
   schema,
   authorizationModes: {
-    defaultAuthorizationMode: 'identityPool',
+    defaultAuthorizationMode: 'userPool'
   },
 });
 
