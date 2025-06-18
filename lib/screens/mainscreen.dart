@@ -41,7 +41,7 @@ class MainScreenState extends State<MainScreen> {
 
   final List<Widget> widgetOptions = const [
     Attendancescreen(),
-    Homescreen(),
+    HomeScreen(),
     Resourcesscreen(),
     JoinTeamscreen(),
     Teamscreen()
