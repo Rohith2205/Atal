@@ -1,5 +1,5 @@
 import 'package:amplify_authenticator/amplify_authenticator.dart';
-import 'package:atl_membership/screens/personaldetails.dart';
+import 'package:atl_membership/components/personaldetails.dart';
 import 'package:atl_membership/screens/profilescreen.dart';
 import 'package:atl_membership/screens/resourcesscreen.dart';
 import 'package:atl_membership/screens/schoolscreen.dart';
@@ -80,7 +80,7 @@ class Sign extends StatelessWidget {
             GetPage(name: Routes.HOME, page:()=> const MainScreen(),
             children: [
               GetPage(name: Routes.ATTENDANCE, page: ()=>Attendancescreen()),
-              GetPage(name: Routes.HOME, page: ()=>Homescreen()),
+              GetPage(name: Routes.HOME, page: ()=>HomeScreen()),
               GetPage(name: Routes.RESOURCES, page: ()=>Resourcesscreen()),
               GetPage(name: Routes.JOINTEAM, page: ()=>JoinTeamscreen()),
               GetPage(name: Routes.TEAM, page: ()=>Teamscreen()),

@@ -67,7 +67,7 @@ class Teamscreen extends StatelessWidget {
               onPressed: () {
                 Navigator.of(context).pop();
                 Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (context) => const Homescreen()),
+                  MaterialPageRoute(builder: (context) => const HomeScreen()),
                       (Route<dynamic> route) => false,
                 );
               },
