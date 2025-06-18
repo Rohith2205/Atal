@@ -35,7 +35,7 @@ export 'attendanceTable.dart';
 
 class ModelProvider implements amplify_core.ModelProviderInterface {
   @override
-  String version = "deb53c5f4e4ff7daf0af4e1ea67203f4";
+  String version = "9bb1fc8b4141286fcb25c4129784bb7a";
   @override
   List<amplify_core.ModelSchema> modelSchemas = [ResourceTable.schema, SuggestionsTable.schema, TeamTable.schema, UserTable.schema, attendanceTable.schema];
   @override

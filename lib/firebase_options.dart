@@ -65,4 +65,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'atlfirebasebackend.firebasestorage.app',
     iosBundleId: 'com.example.atlMembership',
   );
+
 }

@@ -9,7 +9,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
 import 'package:get/get_navigation/src/routes/get_route.dart';
 import '../utils/routes.dart';
-import 'personaldetails.dart';
 import 'aboutscreen.dart';
 import 'achievementsscreen.dart';
 import 'attendancescreen.dart';
@@ -25,6 +24,7 @@ class Sign extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Authenticator(
+        dialCodeOptions: const DialCodeOptions(defaultDialCode: DialCode.in1),
         authenticatorBuilder: (BuildContext context, AuthenticatorState state){
           switch(state.currentStep){
             case AuthenticatorStep.signIn: return AuthScaffold(state: state,
@@ -74,9 +74,9 @@ class Sign extends StatelessWidget {
           return null;
         },
         child: GetMaterialApp(
-          initialRoute: Routes.PERSONAL,
+          initialRoute: Routes.HOME,
           getPages: [
-            GetPage(name: Routes.PERSONAL, page: ()=>PersonalDetailsDialog()),
+            // GetPage(name: Routes.PERSONAL, page: ()=>PersonalDetailsDialog()),
             GetPage(name: Routes.HOME, page:()=> const MainScreen(),
             children: [
               GetPage(name: Routes.ATTENDANCE, page: ()=>Attendancescreen()),

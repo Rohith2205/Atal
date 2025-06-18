@@ -1,4 +1,3 @@
-import 'package:amplify_authenticator/amplify_authenticator.dart';
 import 'package:atl_membership/components/logoutdialog.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
