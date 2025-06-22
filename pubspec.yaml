@@ -53,6 +53,8 @@ dependencies:
   amplify_api: ^2.6.1
   shared_preferences: ^2.5.3
   connectivity_plus: ^6.1.4
+  syncfusion_flutter_pdf: ^29.2.11
+  syncfusion_flutter_pdfviewer: ^29.2.11
 
 
 dev_dependencies:
@@ -83,6 +85,7 @@ flutter:
     - assets/images/
     - assets/images/Emblem_of_Andhra_Pradesh.png
     - assets/icons/
+    - assets/pdfs/
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg
