@@ -1,6 +1,6 @@
 import 'package:amplify_flutter/amplify_flutter.dart';
 import 'package:atl_membership/models/ModelProvider.dart';
-import 'package:atl_membership/utils/PersonalDetailsFirestoreService.dart';
+import 'package:atl_membership/services/PersonalDetailsFirestoreService.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -369,7 +369,7 @@ class _PersonalDetailsDialogState extends State<PersonalDetailsDialog> {
     });
 
     try {
-      await authController.saveUserDetails(
+      await authController.userController.updateUiAndSaveUserDetails(
         university: selectedUniversity!,
         district: selectedDistrict!,
         mandal: selectedMandal!,

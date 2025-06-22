@@ -37,7 +37,9 @@ class CacheManager {
       filteredData['lastUpdated'] = DateTime.now().toIso8601String();
       await prefs.setString(_userDataKey, json.encode(filteredData));
     } catch (e) {
-      print('Error saving user data: $e');
+      if (kDebugMode) {
+        print('Error saving user data: $e');
+      }
     }
   }
 

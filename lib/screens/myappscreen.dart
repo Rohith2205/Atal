@@ -1,11 +1,14 @@
 import 'package:amplify_authenticator/amplify_authenticator.dart';
 import 'package:atl_membership/components/personaldetails.dart';
+import 'package:atl_membership/controllers/AuthController.dart';
+import 'package:atl_membership/screens/PolicyScreen.dart';
 import 'package:atl_membership/screens/profilescreen.dart';
 import 'package:atl_membership/screens/resourcesscreen.dart';
 import 'package:atl_membership/screens/schoolscreen.dart';
 import 'package:atl_membership/screens/suggestionscreen.dart';
 import 'package:atl_membership/screens/teamscreen.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
 import 'package:get/get_navigation/src/routes/get_route.dart';
 import '../utils/routes.dart';
@@ -74,6 +77,9 @@ class Sign extends StatelessWidget {
           return null;
         },
         child: GetMaterialApp(
+          initialBinding: BindingsBuilder((){
+            Get.put(AuthController(),permanent: true);
+          }),
           initialRoute: Routes.HOME,
           getPages: [
             // GetPage(name: Routes.PERSONAL, page: ()=>PersonalDetailsDialog()),
@@ -90,6 +96,7 @@ class Sign extends StatelessWidget {
               GetPage(name: Routes.ACHIEVEMENTS, page: ()=>Achievementsscreen()),
               GetPage(name: Routes.SUGGESTION, page: ()=>Suggestionscreen()),
               GetPage(name: Routes.HELP, page: ()=>HelpSupportscreen()),
+              GetPage(name: Routes.POLICY, page: ()=>Policyscreen())
             ]
             ),
           ],

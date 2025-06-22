@@ -10,7 +10,7 @@ void logoutDialog(AuthController authController,BuildContext context){
     builder: (BuildContext context){
       return AlertDialog(
         title: Text('Logout'),
-        content: Text('${authController.userName.value}!! \n Are you sure you want to logout?'),
+        content: Obx(()=> Text('${authController.userController.userName.value}!! \n Are you sure you want to logout?')),
         actions: [
           TextButton(onPressed: (){Navigator.of(context).pop();}, child: Text('cancel')),
           TextButton(onPressed: ()=>{
