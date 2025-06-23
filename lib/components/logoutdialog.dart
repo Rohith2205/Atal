@@ -1,4 +1,3 @@
-import 'package:amplify_auth_cognito/amplify_auth_cognito.dart';
 import 'package:amplify_flutter/amplify_flutter.dart';
 import 'package:atl_membership/controllers/AuthController.dart';
 import 'package:flutter/material.dart';
@@ -6,15 +5,17 @@ import 'package:get/get.dart';
 
 void logoutDialog(AuthController authController,BuildContext context){
   showDialog(
-    barrierDismissible: false,
+    // barrierDismissible: false,
     context: context,
     builder: (BuildContext context){
       return AlertDialog(
         title: Text('Logout'),
-        content: Text('${authController.userName.value}!! \n Are you sure you want to logout?'),
+        content: Obx(()=> Text('${authController.userController.userName.value}!! \n Are you sure you want to logout?')),
         actions: [
-          TextButton(onPressed: (){Get.back(closeOverlays: true);}, child: Text('cancel')),
-          TextButton(onPressed: ()=>{ Amplify.Auth.signOut()}, child: Text('logout'))
+          TextButton(onPressed: (){Navigator.of(context).pop();}, child: Text('cancel')),
+          TextButton(onPressed: ()=>{
+            Navigator.of(context).pop(),
+            Amplify.Auth.signOut()}, child: Text('logout'))
         ],
       );
     },

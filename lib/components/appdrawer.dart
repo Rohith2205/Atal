@@ -1,4 +1,3 @@
-import 'package:amplify_authenticator/amplify_authenticator.dart';
 import 'package:atl_membership/components/logoutdialog.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -23,29 +22,31 @@ class AppDrawerWidget extends StatelessWidget {
                   padding: const EdgeInsets.only(left: 15, top: 15),
                   margin: const EdgeInsets.only(bottom: 15),
                   decoration: const BoxDecoration(color: Colors.blue),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Obx(() => CircleAvatar(
-                        backgroundColor: authController.profileColor.value,
-                        radius: 45,
-                        child: Center(
-                          child: Text(
-                            authController.userName.value[0],
-                            style: const TextStyle(
-                                color: Colors.white, fontSize: 60),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Obx(() => CircleAvatar(
+                          backgroundColor: authController.userController.profileColor.value,
+                          radius: 45,
+                          child: Center(
+                            child: Text(
+                              authController.userController.userName.value[0]??"",
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 60),
+                            ),
                           ),
+                        )),
+                        Text(
+                          'Hello, ${authController.userController.userName.value}',
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 30),
                         ),
-                      )),
-                      Text(
-                        'Hello, ${authController.userName}',
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
-                        style: const TextStyle(
-                            color: Colors.white, fontSize: 30),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
                 const AppdrawerTile(
@@ -54,7 +55,7 @@ class AppDrawerWidget extends StatelessWidget {
                 const AppdrawerTile(
                     tileName: 'About',
                     routeName: '${Routes.HOME}${Routes.ABOUT}'),
-                const AppdrawerTile(tileName: 'Policies', routeName: ''),
+                const AppdrawerTile(tileName: 'Policies', routeName: '${Routes.HOME}${Routes.POLICY}'),
                 const AppdrawerTile(
                     tileName: 'Team',
                     routeName: '${Routes.HOME}${Routes.JOINTEAM}'),

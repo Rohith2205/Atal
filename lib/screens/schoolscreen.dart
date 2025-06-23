@@ -24,6 +24,7 @@ class _SchoolscreenPageState extends State<Schoolscreen> {
       );
     }
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

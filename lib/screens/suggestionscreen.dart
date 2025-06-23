@@ -13,7 +13,7 @@ class _SuggestionPageState extends State<Suggestionscreen> {
   String? _fileName;
   File? _file;
 
-  final List<String> _dropdownOptions = ['Default', 'Improvement', 'Complaint'];
+  final List<String> _dropdownOptions = ['Default', 'App Related', 'ATL Program'];
   final TextEditingController _concernController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
