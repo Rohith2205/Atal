@@ -20,25 +20,19 @@ import 'package:amplify_auth_cognito/amplify_auth_cognito.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'amplify_outputs.dart';
+import 'package:atl_membership/screens/personal_details.dart';
 
-void main() async{
-  try {
-    SystemChrome.setSystemUIOverlayStyle(
-      SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent
-      )
-    );
-    WidgetsFlutterBinding.ensureInitialized();
-    await _configureAmplify();
-    runApp( DevicePreview(
-      enabled: !kReleaseMode,
-      builder: (context)=>MyApp(),
-    ));
-  } on AmplifyException catch (e) {
-    runApp(Text("Error configuring Amplify: ${e.message}"));
-  }
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await _configureAmplify();
+  SystemChrome.setSystemUIOverlayStyle(
+    SystemUiOverlayStyle(statusBarColor: Colors.transparent),
+  );
+  runApp(DevicePreview(
+    enabled: !kReleaseMode,
+    builder: (context) => const MyApp(),
+  ));
 }
-
 
 Future<void> _configureAmplify() async {
   try {
@@ -53,80 +47,84 @@ Future<void> _configureAmplify() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return Authenticator(
-        authenticatorBuilder: (BuildContext context, AuthenticatorState state){
-          switch(state.currentStep){
-            case AuthenticatorStep.signIn: return AuthScaffold(state: state,
-                body: SignInForm(),
+      authenticatorBuilder: (context, state) {
+        switch (state.currentStep) {
+          case AuthenticatorStep.signIn:
+            return AuthScaffold(
+              state: state,
+              body: SignInForm(),
               footer: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('Don\'t have an account?'),
+                  const Text("Don't have an account?"),
                   TextButton(
-                    onPressed: () => state.changeStep(
-                      AuthenticatorStep.signUp,
-                    ),
-                    child: const Text('Sign Up'),
+                    onPressed: () => state.changeStep(AuthenticatorStep.signUp),
+                    child: const Text("Sign Up"),
                   ),
                 ],
               ),
-
             );
-            case AuthenticatorStep.signUp: return AuthScaffold(state: state,
-                body: SignUpForm.custom(fields: [
-                  SignUpFormField.name(required: true),
-                  SignUpFormField.email(required: true),
-                  SignUpFormField.phoneNumber(required: true),
-                  SignUpFormField.password(),
-                  SignUpFormField.passwordConfirmation()
-                ]),
+          case AuthenticatorStep.signUp:
+            return AuthScaffold(
+              state: state,
+              body: SignUpForm.custom(fields: [
+                SignUpFormField.name(required: true),
+                SignUpFormField.email(required: true),
+                SignUpFormField.phoneNumber(required: true),
+                SignUpFormField.password(),
+                SignUpFormField.passwordConfirmation(),
+
+              ],
+              ),
               footer: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('Already have an account?'),
+                  const Text("Already have an account?"),
                   TextButton(
-                    onPressed: () => state.changeStep(
-                      AuthenticatorStep.signIn,
-                    ),
-                    child: const Text('Sign In'),
+                    onPressed: () => state.changeStep(AuthenticatorStep.signIn),
+                    child: const Text("Sign In"),
                   ),
                 ],
               ),
+            );
+          case AuthenticatorStep.confirmSignUp:
+            return AuthScaffold(state: state, body: ConfirmSignUpForm());
+          default:
+            return null;
+        }
+      },
+      child: GetMaterialApp(
+        initialRoute: Routes.PERSONAL,
+        getPages: [
+          GetPage(name: Routes.PERSONAL, page: ()=> PersonalDetailsDialog()),
+          GetPage(name: Routes.HOME, page: () => const MainScreen(), children: [
+            GetPage(name: Routes.ATTENDANCE, page: () => Attendancescreen()),
+            GetPage(name: Routes.HOME, page: () => Homescreen()),
+            GetPage(name: Routes.RESOURCES, page: () => Resourcesscreen()),
+            GetPage(name: Routes.JOINTEAM, page: () => JoinTeamscreen()),
+            GetPage(name: Routes.TEAM, page: () => Teamscreen()),
+            GetPage(name: Routes.PROFILE, page: () => Profilescreen()),
+            GetPage(name: Routes.ABOUT, page: () => Aboutscreen()),
+            GetPage(name: Routes.SCHOOL, page: () => Schoolscreen()),
+            GetPage(name: Routes.ACHIEVEMENTS, page: () => Achievementsscreen()),
+            GetPage(name: Routes.SUGGESTION, page: () => Suggestionscreen()),
+            GetPage(name: Routes.HELP, page: () => HelpSupportscreen()),
 
-            );
-            case AuthenticatorStep.confirmSignUp: return AuthScaffold(state: state,
-                body: ConfirmSignUpForm()
-            );
-            default : null;
-          }
-          return null;
+          ]),
+        ],
+        theme: ThemeData(colorSchemeSeed: Colors.blue),
+        debugShowCheckedModeBanner: false,
+        builder: (context, child) {
+          return Authenticator.builder()(
+            context,
+            _AfterSignInWrapper(child: child!),
+          );
         },
-        child: GetMaterialApp(
-          initialRoute: Routes.HOME,
-          getPages: [
-            GetPage(name: Routes.HOME, page:()=> const MainScreen(),
-            children: [
-              GetPage(name: Routes.ATTENDANCE, page: ()=>Attendancescreen()),
-              GetPage(name: Routes.HOME, page: ()=>Homescreen()),
-              GetPage(name: Routes.RESOURCES, page: ()=>Resourcesscreen()),
-              GetPage(name: Routes.JOINTEAM, page: ()=>JoinTeamscreen()),
-              GetPage(name: Routes.TEAM, page: ()=>Teamscreen()),
-              GetPage(name: Routes.PROFILE, page: ()=>Profilescreen()),
-              GetPage(name: Routes.ABOUT, page: ()=>Aboutscreen()),
-              GetPage(name: Routes.SCHOOL, page: ()=>Schoolscreen()),
-              GetPage(name: Routes.ACHIEVEMENTS, page: ()=>Achievementsscreen()),
-              GetPage(name: Routes.SUGGESTION, page: ()=>Suggestionscreen()),
-              GetPage(name: Routes.HELP, page: ()=>HelpSupportscreen()),
-            ]
-            ),
-          ],
-          theme: ThemeData(colorSchemeSeed: Colors.blue),
-      debugShowCheckedModeBanner: false,
-      builder: Authenticator.builder(),
-    ));
+      ),
+    );
   }
 }
 
@@ -143,21 +141,21 @@ class AuthScaffold extends StatelessWidget {
   final Widget? footer;
   static const String assetName = 'assets/images/Emblem_of_Andhra_Pradesh.png';
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16,vertical: 50),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 50),
         child: SingleChildScrollView(
           child: Column(
             children: [
-              // App logo
-               Padding(
-                padding: EdgeInsets.only(top: 32),
-                child: Center(child: Image.asset(assetName,height: 175,width: 175,)),
+              Padding(
+                padding: const EdgeInsets.only(top: 32),
+                child: Center(
+                  child: Image.asset(assetName, height: 175, width: 175),
+                ),
               ),
-              SizedBox(height: 50,),
+              const SizedBox(height: 50),
               Container(
                 constraints: const BoxConstraints(maxWidth: 600),
                 child: body,
@@ -171,4 +169,43 @@ class AuthScaffold extends StatelessWidget {
   }
 }
 
+class _AfterSignInWrapper extends StatefulWidget {
+  final Widget child;
+  const _AfterSignInWrapper({required this.child});
 
+  @override
+  State<_AfterSignInWrapper> createState() => _AfterSignInWrapperState();
+}
+
+class _AfterSignInWrapperState extends State<_AfterSignInWrapper> {
+  bool _dialogShown = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _showPersonalDetailsDialogIfNeeded();
+  }
+
+  Future<void> _showPersonalDetailsDialogIfNeeded() async {
+    try {
+      final authSession = await Amplify.Auth.fetchAuthSession();
+      if (authSession.isSignedIn && !_dialogShown) {
+        _dialogShown = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => const PersonalDetailsDialog(),
+          );
+        });
+      }
+    } catch (e) {
+      safePrint('Error fetching auth session: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.child;
+  }
+}

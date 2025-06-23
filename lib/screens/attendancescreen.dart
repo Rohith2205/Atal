@@ -25,23 +25,24 @@ class _AttendancescreenState extends State<Attendancescreen> {
   final TextEditingController _mnameController = TextEditingController();
   final TextEditingController _topicsController = TextEditingController();
   final TextEditingController _remarksController = TextEditingController();
+
   Map<String, bool> options = {
     '6': false,
     '7': false,
     '8': false,
     '9': false,
   };
+
   XFile? _attendanceImage;
   final ImagePicker _picker = ImagePicker();
 
   List<String> get selectedClasses =>
       options.entries.where((e) => e.value).map((e) => e.key).toList();
 
-
   @override
   void initState() {
     super.initState();
-    _fetchLocation();
+    _fetchLocation(); // fetch location as soon as screen loads
     _dateController.text = DateFormat('dd/MM/yyyy').format(DateTime.now());
     _startTimeController.addListener(() => setState(() {}));
     _endTimeController.addListener(() => setState(() {}));
@@ -57,17 +58,19 @@ class _AttendancescreenState extends State<Attendancescreen> {
 
   bool get _isFormValid {
     return _startTimeController.text.isNotEmpty &&
-        _endTimeController.text.isNotEmpty&&
-        _teacherController.text.isNotEmpty&&
-        _moduleController.value.text.isNotEmpty&&
-        _boysController.value.text.isNotEmpty&&
-        _girlsController.value.text.isNotEmpty&&
-        _totalController.value.text.isNotEmpty&&
-        _mnameController.text.isNotEmpty&&
-        _topicsController.text.isNotEmpty&&
-        _remarksController.text.isNotEmpty&&
-        selectedClasses.isNotEmpty&&
-        _attendanceImage !=null;
+        _endTimeController.text.isNotEmpty &&
+        _teacherController.text.isNotEmpty &&
+        _moduleController.value.text.isNotEmpty &&
+        _boysController.value.text.isNotEmpty &&
+        _girlsController.value.text.isNotEmpty &&
+        _totalController.value.text.isNotEmpty &&
+        _mnameController.text.isNotEmpty &&
+        _topicsController.text.isNotEmpty &&
+        _remarksController.text.isNotEmpty &&
+        selectedClasses.isNotEmpty &&
+        _attendanceImage != null &&
+        _latitudeController.text.isNotEmpty &&
+        _longitudeController.text.isNotEmpty;
   }
 
   Future<void> _pickAttendanceImage() async {
@@ -79,44 +82,46 @@ class _AttendancescreenState extends State<Attendancescreen> {
     }
   }
 
-
   Future<void> _fetchLocation() async {
     bool serviceEnabled;
     LocationPermission permission;
 
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Location services are disabled.')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Location services are disabled.')),
+        );
+      }
       return;
     }
 
-    // Request permission if not already granted
     permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Location permission denied')),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Location permission denied')),
+          );
+        }
         return;
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Location permission permanently denied')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Location permission permanently denied')),
+        );
+      }
       return;
     }
 
-    // Get the current location
     try {
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
-
       setState(() {
         _latitudeController.text = position.latitude.toString();
         _longitudeController.text = position.longitude.toString();
@@ -152,8 +157,7 @@ class _AttendancescreenState extends State<Attendancescreen> {
           children: [
             Center(
               child: Container(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
                 margin: const EdgeInsets.only(bottom: 30),
                 color: Colors.blue,
                 child: const Text(
@@ -169,7 +173,6 @@ class _AttendancescreenState extends State<Attendancescreen> {
 
             Image.asset('assets/images/AttendanceScreen.png'),
 
-            // Date Field (auto-filled with today)
             TextField(
               controller: _dateController,
               readOnly: true,
@@ -181,7 +184,6 @@ class _AttendancescreenState extends State<Attendancescreen> {
             ),
             const SizedBox(height: 16),
 
-            // Start & End Time Fields
             Row(
               children: [
                 Expanded(
@@ -213,7 +215,6 @@ class _AttendancescreenState extends State<Attendancescreen> {
             ),
             const SizedBox(height: 16),
 
-            // Latitude Field
             TextField(
               controller: _latitudeController,
               readOnly: true,
@@ -224,7 +225,6 @@ class _AttendancescreenState extends State<Attendancescreen> {
             ),
             const SizedBox(height: 12),
 
-            // Longitude Field
             TextField(
               controller: _longitudeController,
               readOnly: true,
@@ -234,12 +234,12 @@ class _AttendancescreenState extends State<Attendancescreen> {
               ),
             ),
             const SizedBox(height: 20),
+
             Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _teacherController,
-                    onTap: () => {},
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
                       labelText: 'No. of teachers attended',
@@ -251,7 +251,6 @@ class _AttendancescreenState extends State<Attendancescreen> {
                 Expanded(
                   child: TextField(
                     controller: _moduleController,
-                    onTap: () => {},
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
                       labelText: 'Module No.',
@@ -269,7 +268,6 @@ class _AttendancescreenState extends State<Attendancescreen> {
                 Expanded(
                   child: TextField(
                     controller: _boysController,
-                    onTap: () => {},
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
                       labelText: 'No. of Boys',
@@ -281,7 +279,6 @@ class _AttendancescreenState extends State<Attendancescreen> {
                 Expanded(
                   child: TextField(
                     controller: _girlsController,
-                    onTap: () => {},
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
                       labelText: 'No.of girls',
@@ -293,7 +290,6 @@ class _AttendancescreenState extends State<Attendancescreen> {
                 Expanded(
                   child: TextField(
                     controller: _totalController,
-                    onTap: () => {},
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
                       labelText: 'Total students',
@@ -308,7 +304,6 @@ class _AttendancescreenState extends State<Attendancescreen> {
 
             TextField(
               controller: _mnameController,
-              onTap: () => {},
               decoration: const InputDecoration(
                 labelText: 'Module name',
                 border: OutlineInputBorder(),
@@ -318,7 +313,6 @@ class _AttendancescreenState extends State<Attendancescreen> {
             const SizedBox(height: 20),
             TextField(
               controller: _topicsController,
-              onTap: () => {},
               decoration: const InputDecoration(
                 labelText: 'Topics covered',
                 border: OutlineInputBorder(),
@@ -328,7 +322,6 @@ class _AttendancescreenState extends State<Attendancescreen> {
             const SizedBox(height: 20),
             TextField(
               controller: _remarksController,
-              onTap: () => {},
               decoration: const InputDecoration(
                 labelText: 'Remarks',
                 border: OutlineInputBorder(),
@@ -352,10 +345,10 @@ class _AttendancescreenState extends State<Attendancescreen> {
             const SizedBox(height: 10),
             Text(
               "Selected: ${selectedClasses.join(", ")}",
-              style: const TextStyle(fontWeight: FontWeight.bold,fontSize: 20),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
             ),
 
-            SizedBox(height: 20,),
+            const SizedBox(height: 20),
 
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -381,36 +374,33 @@ class _AttendancescreenState extends State<Attendancescreen> {
                       fit: BoxFit.cover,
                     )
                         : const Center(
-                      child: Icon(Icons.camera_alt, size: 40, color: Colors.grey),
+                      child: Icon(Icons.camera_alt,
+                          size: 40, color: Colors.grey),
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-
 
             const SizedBox(height: 20),
-            // Submit Button
+
             SizedBox(
-                width: width * 0.3,
-                height: 38,
-                child: ElevatedButton(
-                  onPressed: _isFormValid
-                      ? () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Attendance submitted')),
-                    );
-                  }
-                      : null, // disabled if form is incomplete
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue),
-                  child: const Text(
-                    'Submit',
-                    style: TextStyle(fontSize: 20),
-                  ),
-                )
-
+              width: width * 0.3,
+              height: 38,
+              child: ElevatedButton(
+                onPressed: _isFormValid
+                    ? () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Attendance submitted')),
+                  );
+                }
+                    : null, // disabled if form incomplete
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+                child: const Text(
+                  'Submit',
+                  style: TextStyle(fontSize: 20),
+                ),
+              ),
             ),
           ],
         ),
@@ -418,7 +408,3 @@ class _AttendancescreenState extends State<Attendancescreen> {
     );
   }
 }
-
-
-
-
