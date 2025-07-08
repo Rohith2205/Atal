@@ -1,146 +1,76 @@
+import 'package:atl_membership/screens/resources_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+
 
 class Resourcesscreen extends StatelessWidget {
   const Resourcesscreen({super.key});
 
-  final List<Map<String, String>> modules = const [
-    {
-      "title": "ATL Introduction",
-      "image": "assets/images/module_1.png",
-      "url": "https://aim.gov.in/pdf/Introduction_to_Atal_Tinkering_Lab.pdf"
-    },
-    {
-      "title": "Basics of Electronics",
-      "image": "assets/images/module 2.png",
-      "url": "https://sites.google.com/view/basic-of-electronics"
-    },
-    {
-      "title": "Sensors & Actuators",
-      "image": "assets/images/module 3.png",
-      "url": "https://sites.google.com/view/sensor-actuator"
-    },
-    {
-      "title": "Computational Thinking",
-      "image": "assets/images/module 4.png",
-      "url": "https://sites.google.com/view/computationalthinkingintro/introduction"
-    },
-    {
-      "title": "Breadboard & PCB",
-      "image": "assets/images/module 5.png",
-      "url": "https://sites.google.com/view/breadboard-and-pcb/breadboard-and-pcb"
-    },
-    {
-      "title": "Arduino Intro",
-      "image": "assets/images/module 6.png",
-      "url": "https://sites.google.com/view/arduino-introduction/what-is-arduino"
-    },
-    {
-      "title": "3D Printing",
-      "image": "assets/images/module 7.png",
-      "url": "https://sites.google.com/view/3d-printing-process"
-    },
-    {
-      "title": "Tools",
-      "image": "assets/images/module 8.png",
-      "url": "https://sites.google.com/view/tools-in-atl"
-    },
-    {
-      "title": "Design Thinking",
-      "image": "assets/images/module 9.png",
-      "url": "https://sites.google.com/view/design-thinking-stages"
-    },
-    {
-      "title": "Raspberry Pi",
-      "image": "assets/images/module 10.png",
-      "url": "https://sites.google.com/view/r-pi"
-    },
-    {
-      "title": "Business Pitch",
-      "image": "assets/images/module 11.png",
-      "url": "https://sites.google.com/view/business-pitch"
-    },
-    {
-      "title": "ATL Modules",
-      "image": "assets/images/module 12.png",
-      "url": "https://sites.google.com/view/atllearningmodules"
-    },
-    {
-      "title": "Safety",
-      "image": "assets/images/module 13.png",
-      "url": "https://sites.google.com/view/understanding-safety"
-    },
-    {
-      "title": "Trainer Slides",
-      "image": "assets/images/module 14.png",
-      "url": "https://sites.google.com/view/master-training"
-    },
-  ];
-
-  Future<void> _launchURL(String url) async {
-    final Uri uri = Uri.parse(url);
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      throw 'Could not launch $url';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final crossAxisCount = screenWidth < 600 ? 2 : 3;
-
     return Scaffold(
-      backgroundColor: const Color(0xffeef1f5),
-      body: Column(
-        children: [
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(10),
-              child: GridView.builder(
-                itemCount: modules.length,
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: crossAxisCount,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: 0.9,
-                ),
-                itemBuilder: (context, index) {
-                  final item = modules[index];
-                  return GestureDetector(
-                    onTap: () => _launchURL(item['url']!),
-                    child: Card(
-                      color: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 3,
-                      child: Column(
-                        children: [
-                          Expanded(
-                            child: Image.asset(
-                              item['image']!,
-                              fit: BoxFit.contain,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            item['title']!,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                        ],
-                      ),
-                    ),
-                  );
-                },
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: Center(
+          child: const Text('Resources',
+            style: TextStyle(fontWeight: FontWeight.bold,),),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        foregroundColor: Colors.black,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20.0),
+        child: Column(
+          children: [
+            const SizedBox(height: 20),
+            Center(
+              child: Image.asset(
+                'assets/images/resources.jpg',
+                width: 250,
+                fit: BoxFit.contain,
               ),
             ),
+            const SizedBox(height: 30),
+            _buildButton(context, 'About ATL Curriculum', () {
+            }),
+            const SizedBox(height: 15),
+            _buildButton(context, 'Resources', () {
+            }),
+            const SizedBox(height: 15),
+            _buildButton(context, 'Modules', () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const Resources_screen()),
+              );
+            }),
+
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildButton(BuildContext context, String label, VoidCallback onTap) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          foregroundColor: Colors.black,
+          backgroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: const BorderSide(color: Colors.black12),
           ),
-        ],
+        ),
+        onPressed: onTap,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label, style: const TextStyle(fontSize: 16)),
+            const Icon(Icons.arrow_forward),
+          ],
+        ),
       ),
     );
   }

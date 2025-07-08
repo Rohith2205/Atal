@@ -7,8 +7,6 @@ import '../components/carousel.dart';
 import '../controllers/AuthController.dart';
 import '../controllers/ConnectivityController.dart';
 
-
-
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 

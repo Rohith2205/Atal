@@ -92,7 +92,7 @@ class Sign extends StatelessWidget {
               GetPage(name: Routes.TEAM, page: ()=>Teamscreen()),
               GetPage(name: Routes.PROFILE, page: ()=>Profilescreen()),
               GetPage(name: Routes.ABOUT, page: ()=>Aboutscreen()),
-              GetPage(name: Routes.SCHOOL, page: ()=>Schoolscreen()),
+              GetPage(name: Routes.SCHOOL, page: ()=>SchoolScreen()),
               GetPage(name: Routes.ACHIEVEMENTS, page: ()=>Achievementsscreen()),
               GetPage(name: Routes.SUGGESTION, page: ()=>Suggestionscreen()),
               GetPage(name: Routes.HELP, page: ()=>HelpSupportscreen()),
@@ -106,6 +106,8 @@ class Sign extends StatelessWidget {
     ));
   }
 }
+
+
 
 class AuthScaffold extends StatelessWidget {
   const AuthScaffold({

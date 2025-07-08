@@ -36,7 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   flutter_svg: ^2.1.0
   get: ^4.7.2
-  amplify_flutter: ^2.6.1
+  amplify_flutter: ^2.1.0
   amplify_auth_cognito: ^2.6.1
   amplify_authenticator: ^2.3.3
   url_launcher: ^6.3.1
@@ -55,6 +55,7 @@ dependencies:
   connectivity_plus: ^6.1.4
   syncfusion_flutter_pdf: ^29.2.11
   syncfusion_flutter_pdfviewer: ^29.2.11
+  amplify_storage_s3: ^2.1.0
 
 
 dev_dependencies:
@@ -84,8 +85,10 @@ flutter:
     - assets/images/AttendanceScreen.png
     - assets/images/
     - assets/images/Emblem_of_Andhra_Pradesh.png
+    - assets/images/resources.jpg
     - assets/icons/
     - assets/pdfs/
+    - assets/pdfs/ChildProtectionPolicy.pdf
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg

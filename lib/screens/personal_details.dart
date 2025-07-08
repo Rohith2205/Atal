@@ -86,17 +86,15 @@ class _PersonalDetailsDialogState extends State<PersonalDetailsDialog> {
             print("District: $selectedDistrict");
             print("College: $selectedCollege");
             print("Roll No: ${rollNoController.text}");
-            print("Name: $selectedName"); // Added print for the new field
-
+            print("Name: $selectedName");
             Navigator.of(context).pop();
-            Get.offAllNamed(Routes.HOME); // Navigates to MainScreen after submit
+            Get.offAllNamed(Routes.HOME);
           },
           child: const Text('Submit', style: TextStyle(color: Colors.deepPurple)),
         ),
       ],
     );
   }
-
   Widget _buildDropdown(String label, String? selectedValue, List<String> items, Function(String?) onChanged) {
     return DropdownButtonFormField<String>(
       value: selectedValue,

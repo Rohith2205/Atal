@@ -1,9 +1,24 @@
 import 'dart:io';
+import 'package:amplify_authenticator/amplify_authenticator.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
+import 'package:get/get_state_manager/src/rx_flutter/rx_obx_widget.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:amplify_flutter/amplify_flutter.dart';
+import 'package:amplify_api/amplify_api.dart';
+
+import '../controllers/AuthController.dart';
+import '../models/UserTable.dart';
+import '../models/UserTableGender.dart';
+// You'll need to import your generated models
+// import 'models/ModelProvider.dart';
 
 class Profilescreen extends StatefulWidget {
-  const Profilescreen({super.key});
+  final String? userId; // Pass user ID when navigating to this screen
+
+  const Profilescreen({super.key, this.userId});
 
   @override
   State<Profilescreen> createState() => _ProfileState();
@@ -11,7 +26,10 @@ class Profilescreen extends StatefulWidget {
 
 class _ProfileState extends State<Profilescreen> {
   bool _isEditing = false;
-  File? _profileImage;
+  bool _isLoading = true;
+  String? _currentUserId;
+  final AuthController authController = Get.find<AuthController>();
+
 
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
@@ -20,19 +38,184 @@ class _ProfileState extends State<Profilescreen> {
   final TextEditingController universityController = TextEditingController();
   final TextEditingController rollNoController = TextEditingController();
   final TextEditingController branchController = TextEditingController();
-  final TextEditingController addressController = TextEditingController();
   final TextEditingController districtController = TextEditingController();
+  final TextEditingController mandalController = TextEditingController();
 
-  String _selectedGender = 'Male';
+  String _selectedGender = 'MALE';
+  String _selectedBranch = 'CSE';
+  bool _isPolicy = false;
+
   final ImagePicker _picker = ImagePicker();
 
-  Future<void> _pickImage() async {
-    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
+  // Branch options matching your schema
+  final List<String> _branchOptions = [
+    'CSE',
+    'CSIT',
+    'CSE (Allied Specializations)',
+    'ECE',
+    'ECE (Allied Specializations)',
+    'EEE',
+    'MECH ENGG',
+    'MECH ENGG (Allied Specializations)',
+    'Other'
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _currentUserId = widget.userId;
+    _fetchUserProfile();
+  }
+
+  Future<void> _fetchUserProfile() async {
+    if (_currentUserId == null) {
+      // If no user ID provided, try to get current authenticated user
+      try {
+        final user = await Amplify.Auth.getCurrentUser();
+        _currentUserId = user.userId;
+      } catch (e) {
+        if (kDebugMode) {
+          print('Error getting current user: $e');
+        }
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+    }
+
+    try {
+      final request = ModelQueries.get(
+        UserTable.classType,
+        UserTableModelIdentifier(id: _currentUserId!),
+      );
+
+      final response = await Amplify.API.query(request: request).response;
+
+      if (response.data != null) {
+        final userData = response.data!;
+        _populateFields(userData);
+      } else {
+        if (kDebugMode) {
+          print('No user data found');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching user profile: $e');
+      }
+      _showErrorSnackBar('Failed to load profile data');
+    } finally {
       setState(() {
-        _profileImage = File(pickedFile.path);
+        _isLoading = false;
       });
     }
+  }
+
+  void _populateFields(dynamic userData) {
+    setState(() {
+      nameController.text = userData.name ?? '';
+      emailController.text = userData.email ?? '';
+      phoneController.text = userData.phone ?? '';
+      collegeController.text = userData.college ?? '';
+      universityController.text = userData.university ?? '';
+      rollNoController.text = userData.reg_no ?? '';
+      branchController.text = userData.branch ?? '';
+      districtController.text = userData.district ?? '';
+      mandalController.text = userData.mandal ?? '';
+
+      // Handle enum values
+      if (userData.gender != null) {
+        _selectedGender = userData.gender.toString().split('.').last;
+      }
+
+      if (userData.branch != null && _branchOptions.contains(userData.branch)) {
+        _selectedBranch = userData.branch;
+      }
+
+      _isPolicy = userData.isPolicy ?? false;
+    });
+  }
+
+  Future<void> _saveProfile() async {
+    if (_currentUserId == null) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Create or update user profile
+      final updatedUser = UserTable(
+        id: _currentUserId!,
+        name: nameController.text.trim(),
+        email: emailController.text.trim(),
+        phone: phoneController.text.trim(),
+        college: collegeController.text.trim(),
+        university: universityController.text.trim(),
+        reg_no: rollNoController.text.trim(),
+        branch: _selectedBranch,
+        district: districtController.text.trim(),
+        mandal: mandalController.text.trim(),
+        gender: _parseGender(_selectedGender),
+        isPolicy: _isPolicy,
+      );
+
+      final request = ModelMutations.update(updatedUser);
+      final response = await Amplify.API.mutate(request: request).response;
+
+      if (response.data != null) {
+        setState(() {
+          _isEditing = false;
+        });
+        _showSuccessSnackBar('Profile updated successfully!');
+      } else {
+        _showErrorSnackBar('Failed to update profile');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error saving profile: $e');
+      }
+      _showErrorSnackBar('Failed to save profile');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  // Helper method to parse gender enum
+  dynamic _parseGender(String gender) {
+    switch (gender.toUpperCase()) {
+      case 'MALE':
+        return UserTableGender.MALE;
+      case 'FEMALE':
+        return UserTableGender.FEMALE;
+      case 'OTHER':
+        return UserTableGender.OTHER;
+      default:
+        return UserTableGender.MALE;
+    }
+  }
+
+
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+
+  void _showSuccessSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+      ),
+    );
   }
 
   @override
@@ -44,8 +227,8 @@ class _ProfileState extends State<Profilescreen> {
     universityController.dispose();
     rollNoController.dispose();
     branchController.dispose();
-    addressController.dispose();
     districtController.dispose();
+    mandalController.dispose();
     super.dispose();
   }
 
@@ -56,105 +239,78 @@ class _ProfileState extends State<Profilescreen> {
         title: const Text('My Profile', style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.blue,
         iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          if (!_isEditing)
+            IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: () {
+                setState(() {
+                  _isEditing = true;
+                });
+              },
+            ),
+        ],
       ),
-      body: SingleChildScrollView(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             const SizedBox(height: 16),
-            GestureDetector(
-              onTap: _isEditing ? _pickImage : null,
-              child: CircleAvatar(
-                radius: 50,
-                backgroundImage: _profileImage != null
-                    ? FileImage(_profileImage!)
-                    : const AssetImage('assets/icons/Checklist.png') as ImageProvider,
-                child: _isEditing
-                    ? Align(
-                  alignment: Alignment.bottomRight,
-                  child: GestureDetector(
-                    onTap: _pickImage,
-                    child: const CircleAvatar(
-                      radius: 16,
-                      backgroundColor: Colors.white,
-                      child: Icon(Icons.camera_alt, size: 18, color: Colors.black),
-                    ),
-                  ),
-                )
-                    : null,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text('Edit Profile',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                IconButton(
-                  icon: const Icon(Icons.edit),
-                  onPressed: () {
-                    setState(() {
-                      _isEditing = true;
-                    });
-                  },
-                ),
-              ],
-            ),
+            _buildProfileImage(),
             const SizedBox(height: 20),
             _buildTextField("Full Name", nameController),
-            _buildTextField("Mail ID", emailController),
+            _buildTextField("Email", emailController, keyboardType: TextInputType.emailAddress),
             _buildGenderDropdown(),
-            _buildTextField("Ph.no", phoneController),
+            _buildTextField("Phone", phoneController, keyboardType: TextInputType.phone),
+            _buildTextField("Registration No", rollNoController),
             _buildTextField("College", collegeController),
             _buildTextField("University", universityController),
-            _buildTextField("Roll No", rollNoController),
-            _buildTextField("Branch", branchController),
-            _buildTextField("Address", addressController),
+            _buildBranchDropdown(),
             _buildTextField("District", districtController),
+            _buildTextField("Mandal", mandalController),
+
             const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _isEditing ? () => _showResetPasswordDialog(context) : null,
-                    child: const Text("Reset password"),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      if (_isEditing) {
-                        setState(() {
-                          _isEditing = false;
-                        });
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Profile saved successfully!")),
-                        );
-                      } else {
-                        Navigator.pop(context);
-                      }
-                    },
-                    child: Text(_isEditing ? "Save" : "Cancel"),
-                  ),
-                ),
-              ],
-            ),
+            _buildActionButtons(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller) {
+  Widget _buildProfileImage() {
+    return GestureDetector(
+      child: Stack(
+        children: [
+          Obx(() => CircleAvatar(
+            backgroundColor: authController.userController.profileColor.value,
+            radius: 45,
+            child: Center(
+              child: Text(
+                authController.userController.userName.value[0]??"",
+                style: const TextStyle(
+                    color: Colors.white, fontSize: 60),
+              ),
+            ),
+          )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField(String label, TextEditingController controller, {TextInputType? keyboardType}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: TextField(
         controller: controller,
         readOnly: !_isEditing,
+        keyboardType: keyboardType,
         decoration: InputDecoration(
           labelText: label,
           border: const OutlineInputBorder(),
+          filled: !_isEditing,
+          fillColor: !_isEditing ? Colors.grey[100] : null,
         ),
       ),
     );
@@ -164,15 +320,17 @@ class _ProfileState extends State<Profilescreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: InputDecorator(
-        decoration: const InputDecoration(
+        decoration: InputDecoration(
           labelText: 'Gender',
-          border: OutlineInputBorder(),
+          border: const OutlineInputBorder(),
+          filled: !_isEditing,
+          fillColor: !_isEditing ? Colors.grey[100] : null,
         ),
         child: DropdownButtonHideUnderline(
           child: DropdownButton<String>(
             value: _selectedGender,
             isExpanded: true,
-            items: ['Male', 'Female', 'Other'].map((String value) {
+            items: ['MALE', 'FEMALE', 'OTHER'].map((String value) {
               return DropdownMenuItem<String>(
                 value: value,
                 child: Text(value),
@@ -191,132 +349,68 @@ class _ProfileState extends State<Profilescreen> {
     );
   }
 
-  Future<void> _showResetPasswordDialog(BuildContext context) async {
-    final oldPasswordController = TextEditingController();
-    final newPasswordController = TextEditingController();
-    final confirmPasswordController = TextEditingController();
+  Widget _buildBranchDropdown() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: 'Branch',
+          border: const OutlineInputBorder(),
+          filled: !_isEditing,
+          fillColor: !_isEditing ? Colors.grey[100] : null,
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            value: _selectedBranch,
+            isExpanded: true,
+            items: _branchOptions.map((String value) {
+              return DropdownMenuItem<String>(
+                value: value,
+                child: Text(value),
+              );
+            }).toList(),
+            onChanged: _isEditing
+                ? (String? newValue) {
+              setState(() {
+                _selectedBranch = newValue!;
+              });
+            }
+                : null,
+          ),
+        ),
+      ),
+    );
+  }
 
-    bool submitted = false;
-    String? errorOld;
-    String? errorNew;
-    String? errorConfirm;
 
-    bool newPasswordVisible = false;
-    bool confirmPasswordVisible = false;
-
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(builder: (context, setState) {
-          void validateAllFields() {
-            setState(() {
-              errorOld = oldPasswordController.text.isEmpty ? "Please enter old password" : null;
-
-              errorNew = newPasswordController.text.isEmpty ? "Please enter new password" : null;
-
-              if (confirmPasswordController.text.isEmpty) {
-                errorConfirm = "Please confirm password";
-              } else if (newPasswordController.text != confirmPasswordController.text) {
-                errorConfirm = "Passwords do not match";
-              } else {
-                errorConfirm = null;
-              }
-            });
-          }
-
-          return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: const Center(
-              child: Text("Reset Password", style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: oldPasswordController,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    hintText: "Old Password",
-                    border: const OutlineInputBorder(),
-                    errorText: submitted ? errorOld : null,
-                    errorStyle: const TextStyle(color: Colors.red),
-                  ),
-                  onChanged: (_) => submitted ? validateAllFields() : null,
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: newPasswordController,
-                  obscureText: !newPasswordVisible,
-                  decoration: InputDecoration(
-                    hintText: "New Password",
-                    border: const OutlineInputBorder(),
-                    errorText: submitted ? errorNew : null,
-                    errorStyle: const TextStyle(color: Colors.red),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        newPasswordVisible ? Icons.visibility : Icons.visibility_off,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          newPasswordVisible = !newPasswordVisible;
-                        });
-                      },
-                    ),
-                  ),
-                  onChanged: (_) => submitted ? validateAllFields() : null,
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: confirmPasswordController,
-                  obscureText: !confirmPasswordVisible,
-                  decoration: InputDecoration(
-                    hintText: "Confirm Password",
-                    border: const OutlineInputBorder(),
-                    errorText: submitted ? errorConfirm : null,
-                    errorStyle: const TextStyle(color: Colors.red),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        confirmPasswordVisible ? Icons.visibility : Icons.visibility_off,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          confirmPasswordVisible = !confirmPasswordVisible;
-                        });
-                      },
-                    ),
-                  ),
-                  onChanged: (_) => submitted ? validateAllFields() : null,
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Cancel"),
+  Widget _buildActionButtons() {
+    return Row(
+      children: [
+        if (_isEditing)
+          Expanded(
+            child: ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _isEditing = false;
+                });
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.grey,
               ),
-              TextButton(
-                onPressed: () {
-                  setState(() {
-                    submitted = true;
-                  });
-                  validateAllFields();
-
-                  if (errorOld == null && errorNew == null && errorConfirm == null) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Password reset successfully"),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  }
-                },
-                child: const Text("Reset"),
-              ),
-            ],
-          );
-        });
-      },
+              child: const Text("Cancel"),
+            ),
+          ),
+        if (_isEditing) const SizedBox(width: 16),
+        Expanded(
+          child: ElevatedButton(
+            onPressed: _isEditing ? _saveProfile : () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _isEditing ? Colors.blue : Colors.grey,
+            ),
+            child: Text(_isEditing ? "Save" : "Back"),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -1,122 +1,43 @@
-import 'package:amplify_api/amplify_api.dart';
-import 'package:amplify_flutter/amplify_flutter.dart';
-import 'package:flutter/foundation.dart';
-
-import '../models/UserTable.dart';
-
-// class UserTableAmplifyService{
-//   static Future<bool?> isPolicyAccepted(String userId)  async {
-//     try {
-//       final queryPredicate = UserTable.ID.eq(userId);
-//       final request = ModelQueries.list<UserTable>(
-//           UserTable.classType,
-//           limit: 1,
-//           where: queryPredicate,
-//           authorizationMode: APIAuthorizationType.userPools
-//       );
-//       final response = await Amplify.API
-//           .query(request: request)
-//           .response;
-//       final queriedUser = response.data?.items.first;
-//      bool? userPolicyAcceptanceBool = queriedUser?.isPolicy;
-//       return userPolicyAcceptanceBool;
-//     } catch (e) {
-//       if (kDebugMode) {
-//         print('Error getting current user ID: $e');
-//       }
-//       return null;
-//     }
-//   }
-//
-//   static Future<UserTable?> getUserById(String userId) async {
-//     try {
-//       final queryPredicate = UserTable.ID.eq(userId);
-//       final request = ModelQueries.list<UserTable>(
-//           UserTable.classType,
-//           limit: 1,
-//           where: queryPredicate,
-//           authorizationMode: APIAuthorizationType.userPools
-//       );
-//       final response = await Amplify.API
-//           .query(request: request)
-//           .response;
-//
-//       if(response.hasErrors){
-//         safePrint("response errors : ${response.errors}");
-//       }
-//       final queriedUser = response.data?.items.first;
-//       return queriedUser;
-//     }catch(e){
-//       if (kDebugMode) {
-//         print('Error getting current user ID: $e');
-//       }
-//       return null;
-//     }
-//   }
-//
-//   static Future<bool?> updatePolicy(String userId) async{
-//     try{
-//       final UserTable? user = await getUserById(userId);
-//       final newuser = user?.copyWith(isPolicy: true);
-//       final request = ModelMutations.update<UserTable>(newuser!,authorizationMode: APIAuthorizationType.userPools);
-//       final response = await Amplify.API.mutate(request: request).response;
-//       if(response.hasErrors){
-//         safePrint("response errors : ${response.errors}");
-//         return null;
-//       }
-//       return true;
-//     }catch(e){
-//       if (kDebugMode) {
-//         print('Error getting current user ID: $e');
-//       }
-//       return null;
-//     }
-//   }
-//
-//   static Future<void> setupSubscriptionForUser(String userId)async {
-//     final queryPredicate = UserTable.ID.eq(userId);
-//     final stream = Amplify.API.subscribe<UserTable>(ModelSubscriptions.onUpdate(UserTable.classType,authorizationMode: APIAuthorizationType.userPools,where: queryPredicate));
-//
-//   }
-//
-// }
-
 import 'dart:async';
 import 'package:amplify_api/amplify_api.dart';
 import 'package:amplify_flutter/amplify_flutter.dart';
-import 'package:flutter/foundation.dart';
-
 import '../models/UserTable.dart';
 
 class UserTableAmplifyService {
-  /// Check if user has accepted the policy
-  static Future<bool?> isPolicyAccepted(String userId) async {
+  // Private method using ModelIdentifier for direct gets
+  static Future<UserTable?> _getUserById(String userId) async {
     try {
-      final queryPredicate = UserTable.ID.eq(userId);
-      final request = ModelQueries.list<UserTable>(
+      final modelId = UserTableModelIdentifier(id: userId);
+      final request = ModelQueries.get<UserTable>(
         UserTable.classType,
-        limit: 1,
-        where: queryPredicate,
+        modelId,
         authorizationMode: APIAuthorizationType.userPools,
       );
       final response = await Amplify.API.query(request: request).response;
 
       if (response.hasErrors) {
-        safePrint("Response errors: ${response.errors}");
+        safePrint("Get user errors: ${response.errors}");
         return null;
       }
-
-      final queriedUser = response.data?.items.first;
-      return queriedUser?.isPolicy;
+      return response.data;
     } catch (e) {
-      if (kDebugMode) {
-        print('Error checking policy acceptance: $e');
-      }
+      safePrint('Get user exception: $e');
       return null;
     }
   }
 
-  /// Get user by ID
+  /// Check if user has accepted the policy (optimized version)
+  static Future<bool?> isPolicyAccepted(String userId) async {
+    try {
+      final user = await _getUserById(userId);
+      return user?.isPolicy;
+    } catch (e) {
+      safePrint('Policy check exception: $e');
+      return null;
+    }
+  }
+
+  /// Get user by ID (FIXED: Handle empty list properly)
   static Future<UserTable?> getUserById(String userId) async {
     try {
       final queryPredicate = UserTable.ID.eq(userId);
@@ -129,50 +50,55 @@ class UserTableAmplifyService {
       final response = await Amplify.API.query(request: request).response;
 
       if (response.hasErrors) {
-        safePrint("Response errors: ${response.errors}");
+        safePrint("List user errors: ${response.errors}");
         return null;
       }
 
-      if (response.data?.items.isNotEmpty == true) {
-        return response.data!.items.first;
+      // FIXED: Check if items exist before accessing first
+      final items = response.data?.items;
+      if (items == null || items.isEmpty) {
+        safePrint("No user found with ID: $userId");
+        return null;
       }
 
-      return null;
+      return items.first;
     } catch (e) {
-      if (kDebugMode) {
-        print('Error getting user by ID: $e');
-      }
+      safePrint('List user exception: $e');
       return null;
     }
   }
 
-  /// Update user policy acceptance status
-  static Future<bool?> updatePolicy(String userId) async {
+  /// Update user policy acceptance status (IMPROVED: Better error handling)
+  static Future<bool> updatePolicy(String userId) async {
     try {
-      final user = await getUserById(userId);
+      safePrint("Attempting to update policy for user: $userId");
+
+      // Use the more efficient _getUserById method
+      final user = await _getUserById(userId);
       if (user == null) {
-        safePrint("User not found for policy update");
-        return null;
+        safePrint("User not found for policy update: $userId");
+        return false;
       }
 
+      safePrint("Found user: ${user.name}, current policy status: ${user.isPolicy}");
+
       final updatedUser = user.copyWith(isPolicy: true);
-      final request = ModelMutations.update<UserTable>(
+      final request = ModelMutations.update(
         updatedUser,
         authorizationMode: APIAuthorizationType.userPools,
       );
       final response = await Amplify.API.mutate(request: request).response;
 
       if (response.hasErrors) {
-        safePrint("Response errors: ${response.errors}");
-        return null;
+        safePrint("Update policy errors: ${response.errors}");
+        return false;
       }
 
+      safePrint("Policy update successful for user: $userId");
       return response.data != null;
     } catch (e) {
-      if (kDebugMode) {
-        print('Error updating policy: $e');
-      }
-      return null;
+      safePrint('Update policy exception: $e');
+      return false;
     }
   }
 
@@ -186,17 +112,12 @@ class UserTableAmplifyService {
       final response = await Amplify.API.mutate(request: request).response;
 
       if (response.hasErrors) {
-        for (final error in response.errors) {
-          safePrint("GraphQL Error: ${error.message}");
-        }
+        safePrint("Create user errors: ${response.errors}");
         return null;
       }
-
       return response.data;
     } catch (e) {
-      if (kDebugMode) {
-        print('Error creating user: $e');
-      }
+      safePrint('Create user exception: $e');
       return null;
     }
   }
@@ -211,17 +132,12 @@ class UserTableAmplifyService {
       final response = await Amplify.API.mutate(request: request).response;
 
       if (response.hasErrors) {
-        for (final error in response.errors) {
-          safePrint("GraphQL Error: ${error.message}");
-        }
+        safePrint("Update user errors: ${response.errors}");
         return null;
       }
-
       return response.data;
     } catch (e) {
-      if (kDebugMode) {
-        print('Error updating user: $e');
-      }
+      safePrint('Update user exception: $e');
       return null;
     }
   }
@@ -230,10 +146,7 @@ class UserTableAmplifyService {
   static Future<bool> deleteUser(String userId) async {
     try {
       final user = await getUserById(userId);
-      if (user == null) {
-        safePrint("User not found for deletion");
-        return false;
-      }
+      if (user == null) return false;
 
       final request = ModelMutations.delete(
         user,
@@ -242,23 +155,18 @@ class UserTableAmplifyService {
       final response = await Amplify.API.mutate(request: request).response;
 
       if (response.hasErrors) {
-        for (final error in response.errors) {
-          safePrint("GraphQL Error: ${error.message}");
-        }
+        safePrint("Delete user errors: ${response.errors}");
         return false;
       }
-
       return response.data != null;
     } catch (e) {
-      if (kDebugMode) {
-        print('Error deleting user: $e');
-      }
+      safePrint('Delete user exception: $e');
       return false;
     }
   }
 
-  /// Setup subscription for user updates
-  static Stream<GraphQLResponse<UserTable>> setupUserSubscription(String userId) {
+  /// Subscription for user updates
+  static Stream<GraphQLResponse<UserTable>> userUpdatesSubscription(String userId) {
     final queryPredicate = UserTable.ID.eq(userId);
     return Amplify.API.subscribe<UserTable>(
       ModelSubscriptions.onUpdate(
@@ -269,34 +177,14 @@ class UserTableAmplifyService {
     );
   }
 
-  /// Setup subscription for user creation
-  static Stream<GraphQLResponse<UserTable>> setupUserCreationSubscription() {
-    return Amplify.API.subscribe<UserTable>(
-      ModelSubscriptions.onCreate(
-        UserTable.classType,
-        authorizationMode: APIAuthorizationType.userPools,
-      ),
-    );
-  }
-
-  /// Setup subscription for user deletion
-  static Stream<GraphQLResponse<UserTable>> setupUserDeletionSubscription() {
-    return Amplify.API.subscribe<UserTable>(
-      ModelSubscriptions.onDelete(
-        UserTable.classType,
-        authorizationMode: APIAuthorizationType.userPools,
-      ),
-    );
-  }
-
-  /// Check if user exists in the database
+  /// Check if user exists
   static Future<bool> userExists(String userId) async {
-    final user = await getUserById(userId);
+    final user = await _getUserById(userId);
     return user != null;
   }
 
-  /// Get users by university (for admin purposes)
-  static Future<List<UserTable?>?> getUsersByUniversity(String university) async {
+  /// Get users by university
+  static Future<List<UserTable>> getUsersByUniversity(String university) async {
     try {
       final queryPredicate = UserTable.UNIVERSITY.eq(university);
       final request = ModelQueries.list<UserTable>(
@@ -307,46 +195,18 @@ class UserTableAmplifyService {
       final response = await Amplify.API.query(request: request).response;
 
       if (response.hasErrors) {
-        safePrint("Response errors: ${response.errors}");
-        return null;
+        safePrint("University query errors: ${response.errors}");
+        return [];
       }
-
-      return response.data?.items;
+      return response.data?.items.whereType<UserTable>().toList() ?? [];
     } catch (e) {
-      if (kDebugMode) {
-        print('Error getting users by university: $e');
-      }
-      return null;
+      safePrint('University query exception: $e');
+      return [];
     }
   }
 
-  /// Get users by college (for admin purposes)
-  static Future<List<UserTable?>?> getUsersByCollege(String college) async {
-    try {
-      final queryPredicate = UserTable.COLLEGE.eq(college);
-      final request = ModelQueries.list<UserTable>(
-        UserTable.classType,
-        where: queryPredicate,
-        authorizationMode: APIAuthorizationType.userPools,
-      );
-      final response = await Amplify.API.query(request: request).response;
-
-      if (response.hasErrors) {
-        safePrint("Response errors: ${response.errors}");
-        return null;
-      }
-
-      return response.data?.items;
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error getting users by college: $e');
-      }
-      return null;
-    }
-  }
-
-  /// Get users with policy not accepted (for admin purposes)
-  static Future<List<UserTable?>?> getUsersWithoutPolicyAcceptance() async {
+  /// Get users who haven't accepted policy
+  static Future<List<UserTable>> getUsersWithoutPolicyAcceptance() async {
     try {
       final queryPredicate = UserTable.ISPOLICY.eq(false);
       final request = ModelQueries.list<UserTable>(
@@ -357,16 +217,13 @@ class UserTableAmplifyService {
       final response = await Amplify.API.query(request: request).response;
 
       if (response.hasErrors) {
-        safePrint("Response errors: ${response.errors}");
-        return null;
+        safePrint("Policy query errors: ${response.errors}");
+        return [];
       }
-
-      return response.data?.items;
+      return response.data?.items.whereType<UserTable>().toList() ?? [];
     } catch (e) {
-      if (kDebugMode) {
-        print('Error getting users without policy acceptance: $e');
-      }
-      return null;
+      safePrint('Policy query exception: $e');
+      return [];
     }
   }
 }

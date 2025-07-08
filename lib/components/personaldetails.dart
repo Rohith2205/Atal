@@ -4,8 +4,6 @@ import 'package:atl_membership/services/PersonalDetailsFirestoreService.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:atl_membership/utils/routes.dart';
-
 import '../controllers/AuthController.dart';
 
 class PersonalDetailsDialog extends StatefulWidget {
@@ -346,7 +344,7 @@ class _PersonalDetailsDialogState extends State<PersonalDetailsDialog> {
     );
   }
 
-
+  // Updated _submitForm method to navigate to Policy screen
   Future<void> _submitForm() async {
     // Validate form
     if (selectedUniversity == null ||
@@ -378,11 +376,17 @@ class _PersonalDetailsDialogState extends State<PersonalDetailsDialog> {
         gender: UserTableGender.MALE,
       );
 
-      // Close dialog and navigate to home
+      // Close dialog first
       if (context.mounted) {
         Navigator.of(context).pop();
       }
-      Get.offAllNamed(Routes.HOME);
+
+      // Navigate to Policy screen instead of completing the flow
+      Get.toNamed('/policy'); // Replace with your actual route name for PolicyScreen
+
+      // OR if you're using direct navigation:
+      // Get.to(() => const Policyscreen());
+
     } catch (e) {
       if (kDebugMode) {
         print('Error submitting form: $e');

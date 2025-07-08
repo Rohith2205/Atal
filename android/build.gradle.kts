@@ -1,3 +1,6 @@
+plugins {
+    id("com.google.gms.google-services") version "4.3.15" apply false // ✅ Fix conflict
+}
 
 allprojects {
     repositories {
@@ -8,10 +11,6 @@ allprojects {
 
 val newBuildDir: Directory = rootProject.layout.buildDirectory.dir("../../build").get()
 rootProject.layout.buildDirectory.value(newBuildDir)
-
-plugins {
-    id("com.google.gms.google-services") version "4.4.2" apply false
-}
 
 subprojects {
     val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)

@@ -1,4 +1,5 @@
 import 'package:amplify_api/amplify_api.dart';
+import 'package:amplify_storage_s3/amplify_storage_s3.dart';
 import 'package:another_flutter_splash_screen/another_flutter_splash_screen.dart';
 import 'package:atl_membership/firebase_options.dart';
 import 'package:atl_membership/screens/myappscreen.dart';
@@ -11,7 +12,6 @@ import 'package:amplify_auth_cognito/amplify_auth_cognito.dart';
 import 'package:flutter/services.dart';
 import 'amplify_outputs.dart';
 import 'models/ModelProvider.dart';
-
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform,);
@@ -30,8 +30,6 @@ void main() async{
     runApp(Text("Error configuring Amplify: ${e.message}"));
   }
 }
-
-
 Future<void> _configureAmplify() async {
   try {
     final auth= AmplifyAuthCognito();
@@ -80,6 +78,5 @@ class MyApp extends StatelessWidget {
         ),
       ),
     );
-
   }
 }

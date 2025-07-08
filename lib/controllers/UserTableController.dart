@@ -30,6 +30,13 @@ class UserController extends GetxController {
   final RxBool isInitialized = false.obs;
   final RxString userError = ''.obs;
 
+  // Additional observable properties for user details
+  final RxString university = ''.obs;
+  final RxString district = ''.obs;
+  final RxString mandal = ''.obs;
+  final RxString college = ''.obs;
+  final RxString rollNumber = ''.obs;
+
   // Dependencies
   late final CacheManager _cacheManager;
   late ConnectivityController _connectivityController;
@@ -160,9 +167,9 @@ class UserController extends GetxController {
     Future.delayed(const Duration(milliseconds: 200), () {
       if (Get.context != null) {
         showDialog(
-          context: Get.context!,
-          barrierDismissible: false,
-          builder: (context) => AlertDialog(content:  PolicyDialog()));
+            context: Get.context!,
+            barrierDismissible: false,
+            builder: (context) => AlertDialog(content:  PolicyDialog()));
       }
     });
   }
@@ -224,6 +231,13 @@ class UserController extends GetxController {
     userId.value = cachedData['userId'] ?? '';
     isPolicyAccepted.value = cachedData['isPolicyAccepted'] ?? false;
 
+    // Update additional user details
+    university.value = cachedData['university'] ?? '';
+    district.value = cachedData['district'] ?? '';
+    mandal.value = cachedData['mandal'] ?? '';
+    college.value = cachedData['college'] ?? '';
+    rollNumber.value = cachedData['rollNumber'] ?? '';
+
     if (userName.value.isNotEmpty) {
       _updateProfileColor();
     }
@@ -236,6 +250,13 @@ class UserController extends GetxController {
     phoneNumber.value = user.phone ?? '';
     userId.value = user.id;
     isPolicyAccepted.value = user.isPolicy ?? false;
+
+    // Update additional user details
+    university.value = user.university ?? '';
+    district.value = user.district ?? '';
+    mandal.value = user.mandal ?? '';
+    college.value = user.college ?? '';
+    rollNumber.value = user.reg_no ?? '';
 
     await _updateProfileColor();
     await _cacheUserData();
@@ -261,6 +282,12 @@ class UserController extends GetxController {
         'phoneNumber': phoneNumber.value,
         'userId': userId.value,
         'isPolicyAccepted': isPolicyAccepted.value,
+        // Cache additional user details
+        'university': university.value,
+        'district': district.value,
+        'mandal': mandal.value,
+        'college': college.value,
+        'rollNumber': rollNumber.value,
       };
       await _cacheManager.saveUserData(userData);
     } catch (e) {
@@ -333,35 +360,65 @@ class UserController extends GetxController {
 
   // Public methods for external use
   Future<bool> acceptPolicy() async {
-    if (userId.value.isEmpty) return false;
+    if (userId.value.isEmpty) {
+      userError.value = 'User ID not available';
+      return false;
+    }
 
     try {
+      // Optimistic UI update
+      isPolicyAccepted.value = true;
+
+      // Update remote
       final result = await UserTableAmplifyService.updatePolicy(userId.value);
-      if (result == true) {
-        isPolicyAccepted.value = true;
-        Get.snackbar('Success', 'Policy accepted successfully!');
-        return true;
+
+      if (result != true) {
+        // Revert if update failed
+        isPolicyAccepted.value = false;
+        userError.value = 'Failed to update policy status';
+        return false;
       }
-      return false;
+
+      // Update local user model
+      if (currentUser.value != null) {
+        currentUser.value = currentUser.value!.copyWith(isPolicy: true);
+        await _cacheUserData();
+      }
+
+      return true;
     } catch (e) {
-      userError.value = 'Failed to accept policy';
+      // Revert on error
+      isPolicyAccepted.value = false;
+      userError.value = 'Policy update error: ${e.toString()}';
       safePrint('Error accepting policy: $e');
-      Get.snackbar('Error', 'Failed to accept policy. Please try again.');
       return false;
     }
   }
 
   Future<bool> checkPolicyStatus() async {
-    if (userId.value.isEmpty) return false;
+    if (userId.value.isEmpty) {
+      userError.value = 'User ID not available';
+      return false;
+    }
 
     try {
       final policyStatus = await UserTableAmplifyService.isPolicyAccepted(userId.value);
-      if (policyStatus != null) {
-        isPolicyAccepted.value = policyStatus;
-        return policyStatus;
+      if (policyStatus == null) {
+        userError.value = 'Failed to verify policy status';
+        return false;
       }
-      return false;
+
+      isPolicyAccepted.value = policyStatus;
+
+      // Update local user model if needed
+      if (currentUser.value != null && currentUser.value!.isPolicy != policyStatus) {
+        currentUser.value = currentUser.value!.copyWith(isPolicy: policyStatus);
+        await _cacheUserData();
+      }
+
+      return policyStatus;
     } catch (e) {
+      userError.value = 'Policy check error: ${e.toString()}';
       safePrint('Error checking policy status: $e');
       return false;
     }
@@ -457,6 +514,20 @@ class UserController extends GetxController {
     }
   }
 
+  Future<bool> hasCompletedPersonalDetails() async {
+    try {
+      // Check if user has completed personal details
+      return university.value.isNotEmpty &&
+          district.value.isNotEmpty &&
+          mandal.value.isNotEmpty &&
+          college.value.isNotEmpty &&
+          rollNumber.value.isNotEmpty;
+    } catch (e) {
+      safePrint('Error checking personal details completion: $e');
+      return false;
+    }
+  }
+
   Future<bool> isUserRegistered() async {
     if (userId.value.isEmpty) return false;
 
@@ -486,6 +557,13 @@ class UserController extends GetxController {
     isOfflineMode.value = false;
     shouldShowDialog.value = false;
     userError.value = '';
+
+    // Reset additional user details
+    university.value = '';
+    district.value = '';
+    mandal.value = '';
+    college.value = '';
+    rollNumber.value = '';
   }
 
   // Getters for convenience
