@@ -300,4 +300,3 @@ class TeamTableService {
     return team?.team_members?.length ?? 0;
   }
 }
-
