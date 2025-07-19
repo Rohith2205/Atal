@@ -344,7 +344,7 @@ class _PersonalDetailsDialogState extends State<PersonalDetailsDialog> {
     );
   }
 
-  // Updated _submitForm method to navigate to Policy screen
+  // Updated _submitForm method to navigate to Home screen
   Future<void> _submitForm() async {
     // Validate form
     if (selectedUniversity == null ||
@@ -367,6 +367,7 @@ class _PersonalDetailsDialogState extends State<PersonalDetailsDialog> {
     });
 
     try {
+      // Save user details
       await authController.userController.updateUiAndSaveUserDetails(
         university: selectedUniversity!,
         district: selectedDistrict!,
@@ -376,16 +377,29 @@ class _PersonalDetailsDialogState extends State<PersonalDetailsDialog> {
         gender: UserTableGender.MALE,
       );
 
+      // Notify AuthController that personal details are completed
+      await authController.onPersonalDetailsCompleted();
+
       // Close dialog first
       if (context.mounted) {
         Navigator.of(context).pop();
       }
 
-      // Navigate to Policy screen instead of completing the flow
-      Get.toNamed('/policy'); // Replace with your actual route name for PolicyScreen
+      // Show success message
+      Get.snackbar(
+        'Success',
+        'Profile completed successfully!',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.green.withOpacity(0.7),
+        colorText: Colors.white,
+        duration: const Duration(seconds: 2),
+      );
+
+      // Navigate to Home screen
+      Get.offAllNamed('/home'); // Replace with your actual home route
 
       // OR if you're using direct navigation:
-      // Get.to(() => const Policyscreen());
+      // Get.offAll(() => const HomeScreen());
 
     } catch (e) {
       if (kDebugMode) {

@@ -1,175 +1,106 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'resources_widgets.dart';
 
-class Resources_screen extends StatelessWidget {
+class Resources_screen extends StatefulWidget {
   const Resources_screen({super.key});
 
-  final List<Map<String, String>> modules = const [
-    {
-      "title": "ATL Introduction",
-      "image": "assets/images/module_1.png",
-      "url": "https://aim.gov.in/pdf/Introduction_to_Atal_Tinkering_Lab.pdf"
-    },
-    {
-      "title": "Basics of Electronics",
-      "image": "assets/images/module 2.png",
-      "url": "https://sites.google.com/view/basic-of-electronics"
-    },
-    {
-      "title": "Sensors & Actuators",
-      "image": "assets/images/module 3.png",
-      "url": "https://sites.google.com/view/sensor-actuator"
-    },
-    {
-      "title": "Computational Thinking",
-      "image": "assets/images/module 4.png",
-      "url": "https://sites.google.com/view/computationalthinkingintro/introduction"
-    },
-    {
-      "title": "Breadboard & PCB",
-      "image": "assets/images/module 5.png",
-      "url": "https://sites.google.com/view/breadboard-and-pcb/breadboard-and-pcb"
-    },
-    {
-      "title": "Arduino Intro",
-      "image": "assets/images/module 6.png",
-      "url": "https://sites.google.com/view/arduino-introduction/what-is-arduino"
-    },
-    {
-      "title": "3D Printing",
-      "image": "assets/images/module 7.png",
-      "url": "https://sites.google.com/view/3d-printing-process"
-    },
-    {
-      "title": "Tools",
-      "image": "assets/images/module 8.png",
-      "url": "https://sites.google.com/view/tools-in-atl"
-    },
-    {
-      "title": "Design Thinking",
-      "image": "assets/images/module 9.png",
-      "url": "https://sites.google.com/view/design-thinking-stages"
-    },
-    {
-      "title": "Raspberry Pi",
-      "image": "assets/images/module 10.png",
-      "url": "https://sites.google.com/view/r-pi"
-    },
-    {
-      "title": "Business Pitch",
-      "image": "assets/images/module 11.png",
-      "url": "https://sites.google.com/view/business-pitch"
-    },
-    {
-      "title": "ATL Modules",
-      "image": "assets/images/module 12.png",
-      "url": "https://sites.google.com/view/atllearningmodules"
-    },
-    {
-      "title": "Safety",
-      "image": "assets/images/module 13.png",
-      "url": "https://sites.google.com/view/understanding-safety"
-    },
-    {
-      "title": "Trainer Slides",
-      "image": "assets/images/module 14.png",
-      "url": "https://sites.google.com/view/master-training"
-    },
-  ];
+  @override
+  State<Resources_screen> createState() => _Resources_screenState();
+}
 
-  Future<void> _launchURL(String url) async {
-    final Uri uri = Uri.parse(url);
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      throw 'Could not launch $url';
-    }
+class _Resources_screenState extends State<Resources_screen> {
+  int? _expandedLevel;
+
+  final Map<int, List<Map<String, String>>> _levelData = {
+    1: [
+      {'title': 'Equipment Manual', 'url': 'https://drive.google.com/file/d/1PRForMGBFrejCDi0i4UvX3Auk8K4xccS/view?usp=sharing'},
+    ],
+    2: [
+      {'title': 'Electronics ppt - I', 'url': 'https://docs.google.com/presentation/d/1TlFQ-TureSL_WstiJ1y8TrfWoRhYsfMu/edit?usp=sharing&ouid=109763324838352162584&rtpof=true&sd=true'},
+      {'title': 'Electronics ppt - II', 'url': 'https://docs.google.com/presentation/d/1HjAYXxtyV1y-r9sry5pPk-A_7Flo_qrZ/edit?usp=sharing&ouid=109763324838352162584&rtpof=true&sd=true'},
+    ],
+
+    3: [
+      {'title': 'Session 1', 'url': 'https://docs.google.com/presentation/d/1pWKVd9-KUB0YubHqxKcZGtiXaRdzRnpo/edit?usp=sharing&ouid=109763324838352162584&rtpof=true&sd=true'},
+      {'title': 'Session 2', 'url': 'https://docs.google.com/presentation/d/1Wl5x_3fI-RU3k_UCfdrO4NTrgNFSLyej/edit?usp=sharing&ouid=109763324838352162584&rtpof=true&sd=true'},
+    ],
+    4: [
+      {'title': 'Activity Card', 'url': 'https://drive.google.com/file/d/1IdsEBr3ozNtAJ4oCaa5BvonCiCVZt51q/view?usp=sharing'},
+      {'title': 'DT template', 'url': 'https://docs.google.com/document/d/1VFxh-rpXmft3K2AOhG1ukdNTHyQ2O-JH/edit?usp=sharing&ouid=109763324838352162584&rtpof=true&sd=true'},
+      {'title': 'Identifying problems', 'url': 'https://docs.google.com/presentation/d/158F6c-LStnqQ720s1x4A1HzY5SQZ31eT/edit?usp=sharing&ouid=109763324838352162584&rtpof=true&sd=true'},
+    ],
+    5: [
+      {'title': 'Safety', 'url': 'https://sites.google.com/view/understanding-safety'},
+    ],
+    6: [
+      {'title': 'Tools', 'url': 'https://sites.google.com/view/tools-in-atl'},
+    ],
+    7: [
+      {'title': 'Raspberry Pi', 'url': 'https://sites.google.com/view/r-pi'},
+    ],
+  };
+
+  // Custom level titles - you can modify these as needed
+  final Map<int, String> _levelTitles = {
+    1: 'ATL Equipment Manual',
+    2: 'Circuit Education',
+    3: '3D Printing',
+    4: 'Design Thinking',
+    5: 'Safety',
+    6: 'Tools',
+    7: 'Raspberry Pi',
+  };
+
+  void _toggleLevel(int level) {
+    setState(() {
+      _expandedLevel = _expandedLevel == level ? null : level;
+    });
   }
+
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final crossAxisCount = screenWidth < 600 ? 2 : 3;
-
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text("Modules"),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
+        title: const Text(
+          'Resources',
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.blue,
         elevation: 0,
-        foregroundColor: Colors.black,
+        foregroundColor: Colors.white,
       ),
-      backgroundColor: const Color(0xffeef1f5),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Big Image
-              Image.asset(
-                'assets/images/resources.jpg',
-                width: 500,
-                height: 250,
-                fit: BoxFit.contain,
-              ),
-              const SizedBox(height: 16),
-
-              // Grid of Modules
-              GridView.builder(
-                physics: const NeverScrollableScrollPhysics(),
-                shrinkWrap: true,
-                itemCount: modules.length,
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: crossAxisCount,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: 0.85,
-                ),
-                itemBuilder: (context, index) {
-                  final item = modules[index];
-                  return GestureDetector(
-                    onTap: () => _launchURL(item['url']!),
-                    child: Card(
-                      color: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 3,
-                      child: Column(
-                        children: [
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.all(6.0),
-                              child: Image.asset(
-                                item['image']!,
-                                fit: BoxFit.contain,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 6),
-                            child: Text(
-                              item['title']!,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13.5,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ],
+      body: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 20.0),
+        children: [
+          const SizedBox(height: 20),
+          Center(
+            child: Image.asset(
+              'assets/images/resources.jpg',
+              width: 250,
+              fit: BoxFit.contain,
+            ),
           ),
-        ),
+          const SizedBox(height: 30),
+          for (int level = 1; level <= 7; level++) ...[
+            // Using separated level button widget with custom title
+            ATLWidgets.buildLevelButton(
+              title: _levelTitles[level] ?? 'Level $level',
+              isExpanded: _expandedLevel == level,
+              onPressed: () => _toggleLevel(level),
+            ),
+
+            // Using separated sub-level buttons widget
+            if (_expandedLevel == level)
+              ...ATLWidgets.buildSubLevelButtons(
+                subLevels: _levelData[level] ?? [],
+                onSubLevelPressed: (url) => ATLWidgets.launchURL(url, context),
+              ),
+
+            SizedBox(height: 8),
+          ],
+        ],
       ),
     );
   }

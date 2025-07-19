@@ -75,16 +75,6 @@ const schema = a.schema({
     photo: a.string(),
     schoolUID: a.integer(),
   }).authorization((allow) => [allow.guest(),allow.authenticated()]),
-
-  ResourceTable: a.model({
-    moduleID: a.integer().required(),
-    module_no: a.integer(),
-    module_name: a.string(),
-    url: a.string(),
-    module_photo: a.string(),
-    isValid: a.boolean(),
-    teamID_list: a.json()
-  }).authorization((allow) => [allow.guest(),allow.authenticated()])
 });
 
 

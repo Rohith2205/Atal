@@ -81,7 +81,6 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/images/module 2.png
     - assets/images/AttendanceScreen.png
     - assets/images/
     - assets/images/Emblem_of_Andhra_Pradesh.png

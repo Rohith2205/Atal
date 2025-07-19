@@ -12,6 +12,7 @@ class TeamTableService {
 
   /// Creates a new team with the given userId as the initial member
   /// Returns the team code if successful, null if failed
+  /// Prevents duplicate team creation - user can only be in one team
   static Future<String?> createTeam(String userId) async {
     if (userId.trim().isEmpty) {
       if (kDebugMode) {
@@ -21,6 +22,15 @@ class TeamTableService {
     }
 
     try {
+      // Check if user is already in a team
+      final existingTeam = await getUserTeam(userId);
+      if (existingTeam != null) {
+        if (kDebugMode) {
+          print('Error: User is already in team: ${existingTeam.team_code}');
+        }
+        return null; // Or return existing team code: existingTeam.team_code
+      }
+
       final teamCode = _generateTeamCode(userId);
       final TeamTable team = TeamTable(
           team_code: teamCode,
@@ -80,6 +90,15 @@ class TeamTableService {
     }
 
     try {
+      // Check if user is already in a team
+      final existingTeam = await getUserTeam(userId);
+      if (existingTeam != null) {
+        if (kDebugMode) {
+          print('Error: User is already in team: ${existingTeam.team_code}');
+        }
+        return false;
+      }
+
       // Find team by team_code
       final queryPredicate = TeamTable.TEAM_CODE.eq(teamCode);
 
@@ -100,7 +119,7 @@ class TeamTableService {
         return false;
       }
 
-      // Check if user is already in team
+      // Check if user is already in team (redundant check, but kept for safety)
       if (team.team_members?.contains(userId) == true) {
         safePrint("User is already in this team");
         return false;
@@ -161,6 +180,41 @@ class TeamTableService {
     } catch (e) {
       if (kDebugMode) {
         print('Error getting team: $e');
+      }
+      return null;
+    }
+  }
+
+  /// Gets the first team that a user belongs to
+  /// Returns the team if found, null if user is not in any team
+  static Future<TeamTable?> getUserTeam(String userId) async {
+    if (userId.trim().isEmpty) {
+      return null;
+    }
+
+    try {
+      final queryPredicate = TeamTable.TEAM_MEMBERS.contains(userId);
+
+      final teamRequest = ModelQueries.list<TeamTable>(
+          TeamTable.classType,
+          where: queryPredicate,
+          limit: 1, // Only get the first team
+          authorizationMode: APIAuthorizationType.userPools
+      );
+
+      final teamResponse = await Amplify.API.query(request: teamRequest).response;
+
+      if (teamResponse.hasErrors) {
+        safePrint("Error getting user team: ${teamResponse.errors}");
+        return null;
+      }
+
+      return teamResponse.data?.items.isNotEmpty == true
+          ? teamResponse.data!.items.first
+          : null;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error getting user team: $e');
       }
       return null;
     }
