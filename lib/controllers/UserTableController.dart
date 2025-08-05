@@ -1,12 +1,10 @@
 import 'dart:async';
-
 import 'package:amplify_api/amplify_api.dart';
 import 'package:amplify_flutter/amplify_flutter.dart';
 import 'package:atl_membership/screens/PolicyScreen.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart' hide GraphQLResponse;
-
 import '../components/personaldetails.dart';
 import '../models/UserTable.dart';
 import '../models/UserTableGender.dart';
@@ -282,7 +280,6 @@ class UserController extends GetxController {
         'phoneNumber': phoneNumber.value,
         'userId': userId.value,
         'isPolicyAccepted': isPolicyAccepted.value,
-        // Cache additional user details
         'university': university.value,
         'district': district.value,
         'mandal': mandal.value,
@@ -468,6 +465,7 @@ class UserController extends GetxController {
     if (userId.value.isEmpty) return false;
 
     try {
+
       safePrint("Creating user with ID: ${userId.value}");
 
       final newUser = UserTable(
@@ -514,14 +512,33 @@ class UserController extends GetxController {
     }
   }
 
+  // Replace these methods in your UserController
+
   Future<bool> hasCompletedPersonalDetails() async {
     try {
-      // Check if user has completed personal details
-      return university.value.isNotEmpty &&
-          district.value.isNotEmpty &&
-          mandal.value.isNotEmpty &&
-          college.value.isNotEmpty &&
-          rollNumber.value.isNotEmpty;
+      // First check if we have loaded data locally
+      if (isUserDataLoaded.value) {
+        return university.value.isNotEmpty &&
+            district.value.isNotEmpty &&
+            mandal.value.isNotEmpty &&
+            college.value.isNotEmpty &&
+            rollNumber.value.isNotEmpty;
+      }
+
+      // If not loaded locally, check the database
+      if (userId.value.isNotEmpty) {
+        final user = await UserTableAmplifyService.getUserById(userId.value);
+        if (user != null) {
+          // Check if user has personal details in database
+          return (user.university?.isNotEmpty == true) &&
+              (user.district?.isNotEmpty == true) &&
+              (user.mandal?.isNotEmpty == true) &&
+              (user.college?.isNotEmpty == true) &&
+              (user.reg_no?.isNotEmpty == true);
+        }
+      }
+
+      return false;
     } catch (e) {
       safePrint('Error checking personal details completion: $e');
       return false;
@@ -532,6 +549,7 @@ class UserController extends GetxController {
     if (userId.value.isEmpty) return false;
 
     try {
+      // Check if user exists in database
       final user = await UserTableAmplifyService.getUserById(userId.value);
       return user != null;
     } catch (e) {
