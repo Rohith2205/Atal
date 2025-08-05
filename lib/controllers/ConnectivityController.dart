@@ -24,9 +24,9 @@ class ConnectivityController extends GetxController {
 
   Future<void> _initializeConnectivity() async {
 
-     await _checkInitialConnectivity();
-     _listenToConnectivityChanges();
-     _initialized.complete();
+    await _checkInitialConnectivity();
+    _listenToConnectivityChanges();
+    _initialized.complete();
 
   }
 
