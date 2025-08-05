@@ -12,5 +12,7 @@ abstract class Routes {
   static const HELP ='/help';
   static const PERSONAL='/personal';
   static const POLICY = '/policy';
+  static const LOGIN = '/login';
+  static const CONFIRM_EMAIL ='/confirm_email';
 // Add other routes as needed
 }
