@@ -4,8 +4,8 @@ import 'package:atl_membership/controllers/UserTableController.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+
 import '../services/user_table_amplify_service.dart';
-import '../utils/routes.dart';
 
 class Policyscreen extends StatefulWidget {
   const Policyscreen({super.key});
@@ -38,7 +38,9 @@ class _PolicyscreenState extends State<Policyscreen> {
                     color: Colors.white),
               ),
             ),
-            body: const PolicyDialog()));
+            body: const PolicyDialog()
+        )
+    );
   }
 }
 
@@ -110,8 +112,16 @@ class _PolicyDialogState extends State<PolicyDialog> {
           // Call onPolicyAccepted() when user accepts the policy
           await _authController.onPolicyAccepted();
 
+          // Complete the personal details flow in AuthController
           await _authController.onPersonalDetailsCompleted();
-          Get.offAllNamed(Routes.HOME);
+
+          // Navigate to home page
+          Get.offAllNamed('/home'); // Replace with your actual home route
+
+          // OR if you're using direct navigation:
+          // Get.offAll(() => const HomeScreen());
+
+          // Show success message
           Get.snackbar(
             'Success',
             'Welcome! Your profile has been completed.',
