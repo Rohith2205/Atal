@@ -28,18 +28,18 @@ class AppDrawerWidget extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Obx(() => CircleAvatar(
-                          backgroundColor: authController.userController.profileColor.value,
+                          backgroundColor: authController.userController.profileColor.value??Colors.deepPurpleAccent,
                           radius: 45,
                           child: Center(
                             child: Text(
-                              authController.userController.userName.value[0]??"",
+                              authController.userController.userName?.value[0]??"",
                               style: const TextStyle(
                                   color: Colors.white, fontSize: 60),
                             ),
                           ),
                         )),
                         Text(
-                          'Hello, ${authController.userController.userName.value}',
+                          'Hello, ${authController.userController.userName?.value??""}',
                           overflow: TextOverflow.ellipsis,
                           maxLines: 1,
                           style: const TextStyle(
