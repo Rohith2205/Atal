@@ -1,10 +1,12 @@
 import 'package:amplify_flutter/amplify_flutter.dart';
 import 'package:atl_membership/models/ModelProvider.dart';
 import 'package:atl_membership/services/PersonalDetailsFirestoreService.dart';
+import 'package:atl_membership/utils/routes.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/AuthController.dart';
+import '../controllers/UserTableController.dart';
 
 class PersonalDetailsDialog extends StatefulWidget {
   const PersonalDetailsDialog({super.key});
@@ -33,12 +35,16 @@ class _PersonalDetailsDialogState extends State<PersonalDetailsDialog> {
   bool isLoadingMandals = false;
   bool isLoadingColleges = false;
 
-  // Get the AuthController instance
-  final AuthController authController = Get.put(AuthController());
+  // Get the AuthController and UserController instances
+  late AuthController authController;
+  late UserController userController;
 
   @override
   void initState() {
     super.initState();
+    // Use Get.find instead of Get.put to get existing instances
+    authController = Get.find<AuthController>();
+    userController = Get.find<UserController>();
     _loadInitialData();
   }
 
@@ -344,7 +350,7 @@ class _PersonalDetailsDialogState extends State<PersonalDetailsDialog> {
     );
   }
 
-  // Updated _submitForm method to navigate to Home screen
+  // Updated _submitForm method according to implementation guide
   Future<void> _submitForm() async {
     // Validate form
     if (selectedUniversity == null ||
@@ -367,39 +373,36 @@ class _PersonalDetailsDialogState extends State<PersonalDetailsDialog> {
     });
 
     try {
-      // Save user details
-      await authController.userController.updateUiAndSaveUserDetails(
+      // Save user details using UserController's saveUserDetails method
+      final success = await userController.saveUserDetails(
         university: selectedUniversity!,
         district: selectedDistrict!,
         mandal: selectedMandal!,
         college: selectedCollege!,
         rollNumber: rollNoController.text.trim(),
-        gender: UserTableGender.MALE,
+        gender: UserTableGender.MALE, // You might want to add gender selection
       );
 
-      // Notify AuthController that personal details are completed
-      await authController.onPersonalDetailsCompleted();
+      if (success) {
+        // Close dialog first
+        Get.back();
+        await authController.onPersonalDetailsCompleted();
 
-      // Close dialog first
-      if (context.mounted) {
-        Navigator.of(context).pop();
+        // Navigate to profile screen
+        Get.offAllNamed(Routes.PROFILE);
+
+        // Show success message
+        Get.snackbar(
+          'Success',
+          'Personal details saved successfully!',
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: Colors.green.withOpacity(0.7),
+          colorText: Colors.white,
+          duration: const Duration(seconds: 2),
+        );
+      } else {
+        throw Exception('Failed to save user details');
       }
-
-      // Show success message
-      Get.snackbar(
-        'Success',
-        'Profile completed successfully!',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.green.withOpacity(0.7),
-        colorText: Colors.white,
-        duration: const Duration(seconds: 2),
-      );
-
-      // Navigate to Home screen
-      Get.offAllNamed('/home'); // Replace with your actual home route
-
-      // OR if you're using direct navigation:
-      // Get.offAll(() => const HomeScreen());
 
     } catch (e) {
       if (kDebugMode) {
