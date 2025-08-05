@@ -257,39 +257,6 @@ class _SchoolScreenPageState extends State<SchoolScreen> {
     }
   }
 
-  // Alternative method if you have a separate UserProfile model
-  Future<void> _updateUserProfileWithSchoolInfo(String userId) async {
-    try {
-      // This is an example - adjust based on your actual UserProfile model
-      /*
-      final userProfile = UserProfile(
-        userId: userId,
-        schoolName: selectedSchool,
-        district: selectedDistrict,
-        mandal: selectedMandal,
-      );
-
-      final request = ModelMutations.create(
-        userProfile,
-        authorizationMode: APIAuthorizationType.userPools,
-      );
-
-      final response = await Amplify.API.mutate(request: request).response;
-
-      if (response.hasErrors) {
-        throw Exception('Failed to create user profile: ${response.errors}');
-      }
-
-      safePrint("User profile created: ${response.data}");
-      */
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error updating user profile: $e');
-      }
-      throw e;
-    }
-  }
-
   @override
   void initState() {
     super.initState();
