@@ -31,7 +31,7 @@ class Sign extends StatelessWidget {
         authenticatorBuilder: (BuildContext context, AuthenticatorState state){
           switch(state.currentStep){
             case AuthenticatorStep.signIn: return AuthScaffold(state: state,
-                body: SignInForm(),
+              body: SignInForm(),
               footer: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -48,13 +48,13 @@ class Sign extends StatelessWidget {
 
             );
             case AuthenticatorStep.signUp: return AuthScaffold(state: state,
-                body: SignUpForm.custom(fields: [
-                  SignUpFormField.name(required: true),
-                  SignUpFormField.email(required: true),
-                  SignUpFormField.phoneNumber(required: true),
-                  SignUpFormField.password(),
-                  SignUpFormField.passwordConfirmation()
-                ]),
+              body: SignUpForm.custom(fields: [
+                SignUpFormField.name(required: true),
+                SignUpFormField.email(required: true),
+                SignUpFormField.phoneNumber(required: true),
+                SignUpFormField.password(),
+                SignUpFormField.passwordConfirmation()
+              ]),
               footer: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -84,26 +84,26 @@ class Sign extends StatelessWidget {
           getPages: [
             // GetPage(name: Routes.PERSONAL, page: ()=>PersonalDetailsDialog()),
             GetPage(name: Routes.HOME, page:()=> const MainScreen(),
-            children: [
-              GetPage(name: Routes.ATTENDANCE, page: ()=>Attendancescreen()),
-              GetPage(name: Routes.HOME, page: ()=>HomeScreen()),
-              GetPage(name: Routes.RESOURCES, page: ()=>Resourcesscreen()),
-              GetPage(name: Routes.JOINTEAM, page: ()=>JoinTeamscreen()),
-              GetPage(name: Routes.TEAM, page: ()=>Teamscreen()),
-              GetPage(name: Routes.PROFILE, page: ()=>Profilescreen()),
-              GetPage(name: Routes.ABOUT, page: ()=>Aboutscreen()),
-              GetPage(name: Routes.SCHOOL, page: ()=>SchoolScreen()),
-              GetPage(name: Routes.ACHIEVEMENTS, page: ()=>Achievementsscreen()),
-              GetPage(name: Routes.SUGGESTION, page: ()=>Suggestionscreen()),
-              GetPage(name: Routes.HELP, page: ()=>HelpSupportscreen()),
-              GetPage(name: Routes.POLICY, page: ()=>Policyscreen())
-            ]
+                children: [
+                  GetPage(name: Routes.ATTENDANCE, page: ()=>Attendancescreen()),
+                  GetPage(name: Routes.HOME, page: ()=>HomeScreen()),
+                  GetPage(name: Routes.RESOURCES, page: ()=>Resourcesscreen()),
+                  GetPage(name: Routes.JOINTEAM, page: ()=>JoinTeamscreen()),
+                  GetPage(name: Routes.TEAM, page: ()=>Teamscreen()),
+                  GetPage(name: Routes.PROFILE, page: ()=>Profilescreen()),
+                  GetPage(name: Routes.ABOUT, page: ()=>Aboutscreen()),
+                  GetPage(name: Routes.SCHOOL, page: ()=>SchoolScreen()),
+                  GetPage(name: Routes.ACHIEVEMENTS, page: ()=>Achievementsscreen()),
+                  GetPage(name: Routes.SUGGESTION, page: ()=>Suggestionscreen()),
+                  GetPage(name: Routes.HELP, page: ()=>HelpSupportscreen()),
+                  GetPage(name: Routes.POLICY, page: ()=>Policyscreen())
+                ]
             ),
           ],
           theme: ThemeData(colorSchemeSeed: Colors.blue),
-      debugShowCheckedModeBanner: false,
-      builder: Authenticator.builder(),
-    ));
+          debugShowCheckedModeBanner: false,
+          builder: Authenticator.builder(),
+        ));
   }
 }
 
@@ -132,7 +132,7 @@ class AuthScaffold extends StatelessWidget {
           child: Column(
             children: [
               // App logo
-               Padding(
+              Padding(
                 padding: EdgeInsets.only(top: 32),
                 child: Center(child: Image.asset(assetName,height: 175,width: 175,)),
               ),
@@ -149,4 +149,3 @@ class AuthScaffold extends StatelessWidget {
     );
   }
 }
-
