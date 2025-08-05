@@ -85,7 +85,6 @@ class _SuggestionPageState extends State<Suggestionscreen> {
       return;
     }
 
-    // First check authentication status
     if (!authController.isAuthenticated.value) {
       Get.snackbar(
         'Authentication Required',
@@ -103,11 +102,10 @@ class _SuggestionPageState extends State<Suggestionscreen> {
     });
 
     try {
-      // Refresh auth state to ensure we have current user data
+      // Ensure user is refreshed
       await authController.refreshAuthState();
 
-      // Get current user ID
-      final userId = authController.userId;
+      final userId = await authController.userController.userId.value;
 
       if (userId == null || userId.isEmpty) {
         Get.snackbar(
@@ -123,7 +121,7 @@ class _SuggestionPageState extends State<Suggestionscreen> {
 
       bool success = await SuggestionsTableAmplifyService.saveSuggestion(
         type: _selectedOption!,
-        concern: _concernController.text,
+        concern: _concernController.text.trim(),
         photo: _file?.path,
         userId: userId,
       );
@@ -187,7 +185,6 @@ class _SuggestionPageState extends State<Suggestionscreen> {
         ),
         backgroundColor: Colors.blue,
         elevation: 1,
-        iconTheme: IconThemeData(color: Colors.black),
       ),
       body: SingleChildScrollView(
         child: Padding(
