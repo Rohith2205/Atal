@@ -20,6 +20,8 @@ class AuthController extends GetxController {
 
   // Add flag to prevent multiple dialog shows
   final RxBool _isDialogShowing = false.obs;
+  static const Duration _dialogCloseDelay = Duration(milliseconds: 300);
+
 
   // Dependencies
   late UserController _userController;
@@ -126,25 +128,21 @@ class AuthController extends GetxController {
     try {
       // First ensure user controller has loaded data
       await _userController.loadFullUserData();
-
-      // Wait a moment for data to be processed
       await Future.delayed(const Duration(milliseconds: 500));
 
-      // Check if user is registered in database
+      // Use the new methods
       final isRegistered = await _userController.isUserRegistered();
       if (!isRegistered) {
         safePrint('User not registered in database - needs personal details');
         return UserStatus.needsPersonalDetails;
       }
 
-      // Check if user has completed personal details
       final hasPersonalDetails = await _userController.hasCompletedPersonalDetails();
       if (!hasPersonalDetails) {
         safePrint('User registered but missing personal details');
         return UserStatus.needsPersonalDetails;
       }
 
-      // Check if policy is accepted
       final isPolicyAccepted = await _userController.checkPolicyStatus();
       if (!isPolicyAccepted) {
         safePrint('User has personal details but policy not accepted');
@@ -156,7 +154,7 @@ class AuthController extends GetxController {
 
     } catch (e) {
       safePrint('Error checking user status: $e');
-      return UserStatus.needsPersonalDetails; // Default to requiring personal details
+      return UserStatus.needsPersonalDetails;
     }
   }
 
@@ -314,36 +312,60 @@ class AuthController extends GetxController {
     try {
       safePrint('Personal details completed');
 
-      // Mark personal details flow as completed
-      _hasCompletedPersonalDetailsFlow.value = true;
-      _isDialogShowing.value = false;
-
+      // Update authentication and flow states first
       isNewUser.value = false;
       isAuthenticated.value = true;
+      _hasCompletedPersonalDetailsFlow.value = true;
 
-      // Close dialog if it's still open
-      if (Get.isDialogOpen == true) {
-        Get.back();
-      }
-
-      // Small delay before navigation to ensure dialog is closed
-      await Future.delayed(const Duration(milliseconds: 200));
+      // Handle dialog closing more explicitly
+      await _closeAnyOpenDialogs();
 
       // Navigate to home screen
       Get.offAllNamed(Routes.HOME);
 
-      // Show success message
-      Get.snackbar(
-        'Profile Complete',
-        'Welcome! Your profile has been set up successfully.',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.green.shade100,
-        colorText: Colors.green.shade700,
-        icon: const Icon(Icons.check_circle, color: Colors.green),
-      );
-    } catch (e) {
-      safePrint('Error completing personal details: $e');
+      // Show success message after navigation
+      _showSuccessMessage();
+
+    } catch (e, stackTrace) {
+      await _handleCompletionError(e, stackTrace);
     }
+  }
+
+  Future<void> _closeAnyOpenDialogs() async {
+    if (Get.isDialogOpen == true) {
+      Get.back();
+      await Future.delayed(_dialogCloseDelay);
+    }
+    _isDialogShowing.value = false;
+  }
+
+  void _showSuccessMessage() {
+    Get.snackbar(
+      'Profile Complete',
+      'Welcome! Your profile has been set up successfully.',
+      snackPosition: SnackPosition.TOP,
+      backgroundColor: Colors.green.shade100,
+      colorText: Colors.green.shade700,
+      icon: const Icon(Icons.check_circle, color: Colors.green),
+    );
+  }
+
+  Future<void> _handleCompletionError(dynamic error, StackTrace stackTrace) async {
+    safePrint('Error completing personal details: $error');
+    safePrint('Stack trace: $stackTrace');
+
+    // Reset states on error
+    _isDialogShowing.value = false;
+    _hasCompletedPersonalDetailsFlow.value = false;
+
+    Get.snackbar(
+      'Setup Error',
+      'Unable to complete profile setup. Please try again.',
+      snackPosition: SnackPosition.TOP,
+      backgroundColor: Colors.red.shade100,
+      colorText: Colors.red.shade700,
+      icon: const Icon(Icons.error, color: Colors.red),
+    );
   }
 
   // NEW METHOD: Called when policy is accepted
