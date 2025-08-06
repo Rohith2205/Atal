@@ -94,12 +94,12 @@ flutter:
 flutter_icons:
   android: true
   ios: true
-  image_path: "assets/icons/logo.png"
+  image_path: "assets/logo.png"
   min_sdk_android: 21
   adaptive_icon_background: "#ffffff" # For Android adaptive icons
-  adaptive_icon_foreground: "assets/icons/logo.png"
+  adaptive_icon_foreground: "assets/logo.png"
   # To add assets to your application, add an assets section, like this:
-  # assets:
+  # assets:vbgh myy78o.
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 
