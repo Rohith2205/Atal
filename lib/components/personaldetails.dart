@@ -373,7 +373,9 @@ class _PersonalDetailsDialogState extends State<PersonalDetailsDialog> {
     });
 
     try {
-      // Save user details using UserController's saveUserDetails method
+      safePrint('Creating user with ID: ${userController.userId.value}');
+
+      // Try to save user details using UserController's saveUserDetails method
       final success = await userController.saveUserDetails(
         university: selectedUniversity!,
         district: selectedDistrict!,
@@ -383,37 +385,30 @@ class _PersonalDetailsDialogState extends State<PersonalDetailsDialog> {
         gender: UserTableGender.MALE, // You might want to add gender selection
       );
 
-      if (success) {
-        // Close dialog first
+      if (success != null) {
+        safePrint('Personal details saved successfully');
+
+        // Close dialog first - but don't await it
         Get.back();
+
+        // Call the auth controller's completion handler
         await authController.onPersonalDetailsCompleted();
-
-        // Navigate to profile screen
         Get.offAllNamed(Routes.PROFILE);
-
-        // Show success message
-        Get.snackbar(
-          'Success',
-          'Personal details saved successfully!',
-          snackPosition: SnackPosition.TOP,
-          backgroundColor: Colors.green.withOpacity(0.7),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2),
-        );
       } else {
-        throw Exception('Failed to save user details');
+        throw Exception('Failed to save user details - success was false');
       }
 
     } catch (e) {
-      if (kDebugMode) {
-        print('Error submitting form: $e');
-      }
+      safePrint('Error submitting form: $e');
+
+      // Don't close the dialog on error - let user retry
       Get.snackbar(
         'Error',
         'Failed to save details. Please try again.',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.withOpacity(0.7),
         colorText: Colors.white,
+        duration: const Duration(seconds: 4),
       );
     } finally {
       if (mounted) {
