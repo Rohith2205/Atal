@@ -130,20 +130,34 @@ class UserController extends GetxController {
         isPolicyAccepted.value = policyAccepted;
 
         if (!policyAccepted) {
-          // User exists but hasn't accepted policy - show policy dialog
-          _showPolicyDialog();
-          safePrint('User exists but policy not accepted - showing policy dialog');
+          safePrint('User exists but policy not accepted');
+          // Don't show dialog here - let AuthController handle it
         } else {
-          safePrint('User exists and policy is accepted');
+          safePrint('User exists and policy is accepted - user is complete');
         }
       } else {
-        // User not found in database, show dialog to collect details
-        _showPersonalDetailsDialog();
+        safePrint('User not found in database - needs personal details');
+        // Don't show dialog here - let AuthController handle it
+        // Just mark that user needs setup
+        isUserDataLoaded.value = false;
       }
     } catch (e) {
       userError.value = 'Failed to load user data';
       safePrint('Error loading online user data: $e');
       _handleOfflineMode();
+    }
+  }
+
+// Add helper methods to check user status without showing dialogs
+  Future<bool> isUserRegistered() async {
+    try {
+      if (userId.value.isEmpty) return false;
+
+      final user = await UserTableAmplifyService.getUserById(userId.value);
+      return user != null;
+    } catch (e) {
+      safePrint('Error checking if user is registered: $e');
+      return false;
     }
   }
 
@@ -193,7 +207,7 @@ class UserController extends GetxController {
 
       safePrint("User details save result: $success");
 
-      if (success) {
+      if (success != null) {
         shouldShowDialog.value = false;
         userError.value = '';
 
@@ -392,30 +406,14 @@ class UserController extends GetxController {
     }
   }
 
+
   Future<bool> checkPolicyStatus() async {
-    if (userId.value.isEmpty) {
-      userError.value = 'User ID not available';
-      return false;
-    }
-
     try {
-      final policyStatus = await UserTableAmplifyService.isPolicyAccepted(userId.value);
-      if (policyStatus == null) {
-        userError.value = 'Failed to verify policy status';
-        return false;
-      }
+      if (userId.value.isEmpty) return false;
 
-      isPolicyAccepted.value = policyStatus;
-
-      // Update local user model if needed
-      if (currentUser.value != null && currentUser.value!.isPolicy != policyStatus) {
-        currentUser.value = currentUser.value!.copyWith(isPolicy: policyStatus);
-        await _cacheUserData();
-      }
-
-      return policyStatus;
+      final user = await UserTableAmplifyService.getUserById(userId.value);
+      return user?.isPolicy ?? false;
     } catch (e) {
-      userError.value = 'Policy check error: ${e.toString()}';
       safePrint('Error checking policy status: $e');
       return false;
     }
@@ -454,7 +452,7 @@ class UserController extends GetxController {
   }
 
   // Method to save user details (moved from AuthController)
-  Future<bool> saveUserDetails({
+  Future<Object?> saveUserDetails({
     required String university,
     required String district,
     required String mandal,
@@ -462,52 +460,70 @@ class UserController extends GetxController {
     required String rollNumber,
     required UserTableGender gender,
   }) async {
-    if (userId.value.isEmpty) return false;
-
     try {
+      safePrint('Saving user details for user ID: ${userId.value}');
 
-      safePrint("Creating user with ID: ${userId.value}");
+      // First check if user already exists
+      final existingUser = await UserTableAmplifyService.getUserById(userId.value);
 
-      final newUser = UserTable(
-        id: userId.value,
-        university: university,
-        district: district,
-        mandal: mandal,
-        college: college,
-        reg_no: rollNumber,
-        email: email.value,
-        phone: phoneNumber.value,
-        name: userName.value,
-        gender: gender,
-        isPolicy: false,
-      );
+      if (existingUser != null) {
+        // User exists - update their details
+        safePrint('User exists, updating personal details');
 
-      final request = ModelMutations.create(
-        newUser,
-        authorizationMode: APIAuthorizationType.userPools,
-      );
-      final response = await Amplify.API.mutate(request: request).response;
+        final updatedUser = existingUser.copyWith(
+          university: university,
+          district: district,
+          mandal: mandal,
+          college: college,
+          reg_no: rollNumber,
+          gender: gender,
+          // Keep existing data
+          name: existingUser.name,
+          email: existingUser.email,
+          phone: existingUser.phone,
+          isPolicy: existingUser.isPolicy,
+        );
 
-      if (response.errors.isNotEmpty) {
-        for (final error in response.errors) {
-          safePrint('GraphQL Error: ${error.message}');
+        final success = await UserTableAmplifyService.updateUser(updatedUser);
+
+        if (success != null) {
+          await _updateUserData(updatedUser);
+          safePrint('User details updated successfully');
         }
-        return false;
+
+        return success;
+
+      } else {
+        // User doesn't exist - create new user
+        safePrint('User does not exist, creating new user');
+
+        final newUser = UserTable(
+          id: userId.value,
+          name: userName.value,
+          email: email.value,
+          phone: phoneNumber.value,
+          university: university,
+          district: district,
+          mandal: mandal,
+          college: college,
+          reg_no: rollNumber,
+          gender: gender,
+          isPolicy: false, // Default to false, will be updated when policy is accepted
+        );
+
+        final success = await UserTableAmplifyService.createUser(newUser);
+
+        if (success != null) {
+          await _updateUserData(newUser);
+          safePrint('New user created successfully');
+        }
+
+        return success;
       }
 
-      if (response.data != null) {
-        await _updateUserData(response.data!);
-        safePrint("User creation successful: ${response.data}");
-        await _setupUserSubscription();
-        Get.snackbar('Success', 'Personal details saved successfully!');
-        return true;
-      }
-
-      return false;
     } catch (e) {
-      userError.value = 'Failed to save user details';
       safePrint('Error saving user details: $e');
-      Get.snackbar('Error', 'Failed to save personal details. Please try again.');
+      userError.value = 'Failed to save user details';
       return false;
     }
   }
@@ -516,47 +532,23 @@ class UserController extends GetxController {
 
   Future<bool> hasCompletedPersonalDetails() async {
     try {
-      // First check if we have loaded data locally
-      if (isUserDataLoaded.value) {
-        return university.value.isNotEmpty &&
-            district.value.isNotEmpty &&
-            mandal.value.isNotEmpty &&
-            college.value.isNotEmpty &&
-            rollNumber.value.isNotEmpty;
-      }
+      if (userId.value.isEmpty) return false;
 
-      // If not loaded locally, check the database
-      if (userId.value.isNotEmpty) {
-        final user = await UserTableAmplifyService.getUserById(userId.value);
-        if (user != null) {
-          // Check if user has personal details in database
-          return (user.university?.isNotEmpty == true) &&
-              (user.district?.isNotEmpty == true) &&
-              (user.mandal?.isNotEmpty == true) &&
-              (user.college?.isNotEmpty == true) &&
-              (user.reg_no?.isNotEmpty == true);
-        }
-      }
+      final user = await UserTableAmplifyService.getUserById(userId.value);
+      if (user == null) return false;
 
-      return false;
+      // Check if user has all required personal details
+      return user.university != null &&
+          user.district != null &&
+          user.mandal != null &&
+          user.college != null;
     } catch (e) {
       safePrint('Error checking personal details completion: $e');
       return false;
     }
   }
 
-  Future<bool> isUserRegistered() async {
-    if (userId.value.isEmpty) return false;
 
-    try {
-      // Check if user exists in database
-      final user = await UserTableAmplifyService.getUserById(userId.value);
-      return user != null;
-    } catch (e) {
-      safePrint('Error checking user registration: $e');
-      return false;
-    }
-  }
 
   /// Clear all user data and reset state
   Future<void> clearUserData() async {
