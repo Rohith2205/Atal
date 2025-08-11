@@ -45,16 +45,23 @@ class HelpSupportscreen extends StatelessWidget {
                       final Uri emailLaunchUri = Uri(
                         scheme: 'mailto',
                         path: 'atlmentor.ap@gmail.com',
-                        query: Uri.encodeFull('subject=Support Request'),
+                        query: Uri(queryParameters: {
+                          'subject': 'Support Request',
+                        }).toString(),
                       );
-                      if (await canLaunchUrl(emailLaunchUri)) {
-                        await launchUrl(emailLaunchUri);
-                      } else {
+                      try {
+                        if (!await launchUrl(emailLaunchUri)) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('No email app found')),
+                          );
+                        }
+                      } catch (e) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Could not open email app')),
+                          SnackBar(content: Text('Error: $e')),
                         );
                       }
                     },
+
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: const [
