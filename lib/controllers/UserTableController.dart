@@ -161,19 +161,6 @@ class UserController extends GetxController {
     }
   }
 
-  void _showPersonalDetailsDialog() {
-    shouldShowDialog.value = true;
-    Future.delayed(const Duration(milliseconds: 200), () {
-      if (Get.context != null) {
-        showDialog(
-          context: Get.context!,
-          barrierDismissible: false,
-          builder: (context) => PersonalDetailsDialog(),
-        );
-      }
-    });
-  }
-
   void _showPolicyDialog() {
     shouldShowDialog.value = true;
     Future.delayed(const Duration(milliseconds: 200), () {
