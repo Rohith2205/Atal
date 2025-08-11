@@ -136,7 +136,7 @@ class _PolicyDialogState extends State<PolicyDialog> {
             'Error',
             'Failed to accept policy. Please try again.',
             snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.red.withOpacity(0.7),
+            backgroundColor: Colors.green.withOpacity(0.7),
             colorText: Colors.white,
           );
         }
