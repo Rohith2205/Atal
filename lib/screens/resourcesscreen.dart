@@ -67,6 +67,7 @@ class Resourcesscreen extends StatelessWidget {
               );
             },
           ),
+          const SizedBox(height: 16,)
         ],
       ),
     );
