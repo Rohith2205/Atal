@@ -22,7 +22,6 @@ class AuthController extends GetxController {
   final RxBool _isDialogShowing = false.obs;
   static const Duration _dialogCloseDelay = Duration(milliseconds: 300);
 
-
   // Dependencies
   late UserController _userController;
   late ConnectivityController _connectivityController;
@@ -97,24 +96,14 @@ class AuthController extends GetxController {
     try {
       await _fetchCognitoUserAttributes();
 
-      // Check user status
+      // Check user status with improved logic
       final userStatus = await _checkUserStatus();
 
       isAuthenticated.value = true;
 
-      if (userStatus == UserStatus.needsPersonalDetails) {
-        // New user - show personal details dialog
-        isNewUser.value = true;
-        _showPersonalDetailsDialog();
-      } else {
-        // User is complete or only needs policy - go to home
-        isNewUser.value = false;
+      // Handle different user statuses
+      await _handleUserStatus(userStatus);
 
-        // Only navigate if we're not already on the home screen
-        if (Get.currentRoute != Routes.HOME) {
-          Get.offAllNamed(Routes.HOME);
-        }
-      }
     } catch (e) {
       safePrint('Error handling sign in: $e');
       authError.value = 'Failed to process sign in';
@@ -123,37 +112,89 @@ class AuthController extends GetxController {
     }
   }
 
-  // Enhanced user status checking
+  // NEW: Separate method to handle user status
+  Future<void> _handleUserStatus(UserStatus userStatus) async {
+    switch (userStatus) {
+      case UserStatus.needsPersonalDetails:
+        safePrint('User needs personal details - showing dialog');
+        isNewUser.value = true;
+
+        // Small delay to ensure UI is ready, then show dialog
+        Future.delayed(const Duration(milliseconds: 500), () {
+          _showPersonalDetailsDialog();
+        });
+        break;
+
+      case UserStatus.needsPolicy:
+        safePrint('User needs policy acceptance');
+        isNewUser.value = false;
+        // Policy dialog will be handled by UserController
+        // Just navigate to home for now
+        if (Get.currentRoute != Routes.HOME) {
+          Get.offAllNamed(Routes.HOME);
+        }
+        break;
+
+      case UserStatus.complete:
+        safePrint('User is complete - navigating to home');
+        isNewUser.value = false;
+        if (Get.currentRoute != Routes.HOME) {
+          Get.offAllNamed(Routes.HOME);
+        }
+        break;
+    }
+  }
+
+  // Enhanced user status checking with better error handling
   Future<UserStatus> _checkUserStatus() async {
     try {
-      // First ensure user controller has loaded data
+      safePrint('Checking user status...');
+
+      // Ensure we have a valid user ID
+      if (_userId.value.isEmpty) {
+        safePrint('User ID is empty - needs personal details');
+        return UserStatus.needsPersonalDetails;
+      }
+
+      // Load user data and wait for completion
       await _userController.loadFullUserData();
+
+      // Add extra delay to ensure data is fully loaded
       await Future.delayed(const Duration(milliseconds: 500));
 
-      // Use the new methods
+      // Check if user is registered in database
       final isRegistered = await _userController.isUserRegistered();
+      safePrint('User registered in database: $isRegistered');
+
       if (!isRegistered) {
-        safePrint('User not registered in database - needs personal details');
+        safePrint('User not found in database - needs personal details');
         return UserStatus.needsPersonalDetails;
       }
 
+      // Check if personal details are complete
       final hasPersonalDetails = await _userController.hasCompletedPersonalDetails();
+      safePrint('User has completed personal details: $hasPersonalDetails');
+
       if (!hasPersonalDetails) {
-        safePrint('User registered but missing personal details');
+        safePrint('User exists but missing personal details');
         return UserStatus.needsPersonalDetails;
       }
 
+      // Check policy acceptance
       final isPolicyAccepted = await _userController.checkPolicyStatus();
+      safePrint('User has accepted policy: $isPolicyAccepted');
+
       if (!isPolicyAccepted) {
         safePrint('User has personal details but policy not accepted');
         return UserStatus.needsPolicy;
       }
 
-      safePrint('User is complete - personal details and policy both done');
+      safePrint('User is complete - all requirements met');
       return UserStatus.complete;
 
     } catch (e) {
       safePrint('Error checking user status: $e');
+      // Default to needs personal details on error
       return UserStatus.needsPersonalDetails;
     }
   }
@@ -171,23 +212,26 @@ class AuthController extends GetxController {
       return;
     }
 
+    // Check if we're in the right context
+    if (Get.context == null) {
+      safePrint('No context available for dialog, skipping...');
+      return;
+    }
+
+    safePrint('Showing personal details dialog');
     _isDialogShowing.value = true;
 
-    // Delay to ensure UI is ready
-    Future.delayed(const Duration(milliseconds: 500), () {
-      // Double-check before showing
-      if (!_hasCompletedPersonalDetailsFlow.value && !Get.isDialogOpen!) {
-        Get.dialog(
-          const PersonalDetailsDialog(),
-          barrierDismissible: false,
-          barrierColor: Colors.black54,
-        ).then((_) {
-          // Dialog closed
-          _isDialogShowing.value = false;
-        });
-      } else {
-        _isDialogShowing.value = false;
-      }
+    Get.dialog(
+      const PersonalDetailsDialog(),
+      barrierDismissible: false,
+      barrierColor: Colors.black54,
+    ).then((_) {
+      // Dialog closed
+      safePrint('Personal details dialog closed');
+      _isDialogShowing.value = false;
+    }).catchError((error) {
+      safePrint('Error with personal details dialog: $error');
+      _isDialogShowing.value = false;
     });
   }
 
@@ -238,19 +282,13 @@ class AuthController extends GetxController {
       if (session.isSignedIn) {
         await _fetchCognitoUserAttributes();
 
-        // Check user status - this now properly loads data first
+        // Check user status
         final userStatus = await _checkUserStatus();
         isAuthenticated.value = true;
 
-        if (userStatus == UserStatus.needsPersonalDetails && !_hasCompletedPersonalDetailsFlow.value) {
-          isNewUser.value = true;
-          // Only show dialog if we're not in loading state
-          if (!isLoading.value) {
-            _showPersonalDetailsDialog();
-          }
-        } else {
-          isNewUser.value = false;
-          // User is complete or only needs policy - will be handled by UserController
+        // Handle user status, but only show dialog if not loading
+        if (!isLoading.value) {
+          await _handleUserStatus(userStatus);
         }
 
         safePrint("User authenticated: ${_userController.userName.value} (${_userController.userId.value})");
@@ -308,6 +346,7 @@ class AuthController extends GetxController {
   }
 
   // Called when personal details are successfully submitted
+  // Updated method in AuthController
   Future<void> onPersonalDetailsCompleted() async {
     try {
       safePrint('Personal details completed');
@@ -320,17 +359,27 @@ class AuthController extends GetxController {
       // Handle dialog closing more explicitly
       await _closeAnyOpenDialogs();
 
-      // Navigate to home screen
-      Get.offAllNamed(Routes.HOME);
+      // Check if user still needs policy acceptance
+      final userStatus = await _checkUserStatus();
 
-      // Show success message after navigation
-      _showSuccessMessage();
+      if (userStatus == UserStatus.needsPolicy) {
+        // Navigate to home where ProfileIncompleteView will show
+        Get.offAllNamed(Routes.HOME);
+
+        // Show message about policy
+
+      } else {
+        // Navigate to home screen (complete flow)
+        Get.offAllNamed(Routes.HOME);
+
+        // Show success message after navigation
+        _showSuccessMessage();
+      }
 
     } catch (e, stackTrace) {
       await _handleCompletionError(e, stackTrace);
     }
   }
-
   Future<void> _closeAnyOpenDialogs() async {
     if (Get.isDialogOpen == true) {
       Get.back();
@@ -368,7 +417,7 @@ class AuthController extends GetxController {
     );
   }
 
-  // NEW METHOD: Called when policy is accepted
+  // Called when policy is accepted
   Future<void> onPolicyAccepted() async {
     try {
       safePrint('Policy accepted - redirecting to home');
@@ -397,6 +446,9 @@ class AuthController extends GetxController {
       safePrint('Error handling policy acceptance: $e');
     }
   }
+
+  // Rest of your methods remain the same...
+  // (signUp, confirmSignUp, signIn, signOut, etc.)
 
   // SIGNUP IMPLEMENTATION
   Future<bool> signUp({
