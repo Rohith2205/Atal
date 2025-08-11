@@ -43,19 +43,29 @@ class SocialMediaSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const _SectionTitle(title: 'Also visit us on'),
-        const SizedBox(height: 15),
-        _buildSocialMediaCards(),
-      ],
+    return Container(
+      color: Colors.white, // Ensure visual continuity
+      padding: const EdgeInsets.only(top: 8.0, bottom: 24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Divider(
+            thickness: 1,
+            indent: 24,
+            endIndent: 24,
+            color: Colors.grey,
+          ),
+          const _SectionTitle(title: 'Also visit us on'),
+          const SizedBox(height: 12),
+          _buildSocialMediaCards(),
+        ],
+      ),
     );
   }
 
   Widget _buildSocialMediaCards() {
     return SizedBox(
-      height: 90,
+      height: 100,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 24),
