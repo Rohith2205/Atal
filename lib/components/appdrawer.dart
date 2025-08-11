@@ -93,15 +93,23 @@ class AppDrawerWidget extends StatelessWidget {
           ListTile(
             onTap: () async {
               const url = 'https://aim.gov.in/';
-              if (await canLaunchUrl(Uri.parse(url))) {
-                await launchUrl(Uri.parse(url),
-                    mode: LaunchMode.externalApplication);
-              } else {
+              final uri = Uri.parse(url);
+              try {
+                if (!await launchUrl(
+                  uri,
+                  mode: LaunchMode.externalApplication,
+                )) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Could not launch website')),
+                  );
+                }
+              } catch (e) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Could not launch website')),
+                  SnackBar(content: Text('Error: $e')),
                 );
               }
             },
+
             title: const Text(
               'Visit Our Website',
               style: TextStyle(fontSize: 24, color: Color(0xFF49454F)),
