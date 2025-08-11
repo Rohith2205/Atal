@@ -108,12 +108,19 @@ class ATLWidgets {
 
   // URL launcher helper
   static Future<void> launchURL(String url, BuildContext context) async {
-    final Uri uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
+    try {
+      final Uri uri = Uri.parse(url);
+      if (!await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication, // opens in Chrome/Safari
+      )) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not launch $url')),
+        );
+      }
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not launch $url')),
+        SnackBar(content: Text('Error: $e')),
       );
     }
   }
