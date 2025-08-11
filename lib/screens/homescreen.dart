@@ -67,7 +67,7 @@ class ProfileIncompleteView extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Center(
       child: Text(
-        'Please complete your profile to continue',
+        'Please Accept Policy to continue',
         style: TextStyle(fontSize: 16, color: Colors.grey),
       ),
     );
@@ -95,6 +95,7 @@ class HomeContent extends StatelessWidget {
           _buildAnnouncementsSection(),
           const SizedBox(height: 30),
           _buildSocialMediaSection(),
+          const SizedBox(height: 16,)
         ],
       ),
     );
@@ -135,9 +136,3 @@ class HomeContent extends StatelessWidget {
     ));
   }
 }
-
-
-
-
-
-
