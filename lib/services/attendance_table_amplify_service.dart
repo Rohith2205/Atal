@@ -33,13 +33,15 @@ class AttendanceTableAmplifyService {
   // Add this method to your service class
   static Future<String?> uploadImageToS3(String imagePath) async {
     try {
+      final key = 'attendance-photos/${DateTime.now().millisecondsSinceEpoch}.jpg';
+
       final uploadTask = Amplify.Storage.uploadFile(
         localFile: AWSFile.fromPath(imagePath),
-        path: StoragePath.fromString('public/attendance_images/${DateTime.now().millisecondsSinceEpoch}.jpg'),
+        path: StoragePath.fromString(key),
       );
 
       final result = await uploadTask.result;
-      return result.uploadedItem.path;
+      return result.uploadedItem.path; // this is the key you save in DynamoDB
     } catch (e) {
       if (kDebugMode) {
         print('Error uploading image: $e');
@@ -47,6 +49,7 @@ class AttendanceTableAmplifyService {
       return null;
     }
   }
+
 
   /// Check if attendance already exists for a specific date
   static Future<bool> checkAttendanceForDate(DateTime date) async {
