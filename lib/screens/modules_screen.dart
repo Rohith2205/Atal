@@ -196,7 +196,7 @@ class _ModulesScreenState extends State<ModulesScreen> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text(
-          'Resources',
+          'Modules',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.blue,
