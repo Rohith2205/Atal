@@ -1,8 +1,5 @@
-
 // Announcements section component
 import 'package:flutter/material.dart';
-
-
 
 class AnnouncementsSection extends StatelessWidget {
   final bool isOnline;
@@ -49,7 +46,7 @@ class AnnouncementsSection extends StatelessWidget {
 
   Widget _buildOnlineContent() {
     return const Text(
-      'No announcements\nannounced yet',
+      'Stay updated with the latest\nevents, and ATL activities here! 🚀',
       textAlign: TextAlign.center,
       style: TextStyle(
         fontSize: 20,
