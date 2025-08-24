@@ -12,32 +12,24 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     final authController = Get.find<AuthController>();
     final connectivityController = Get.find<ConnectivityController>();
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Obx(() => _buildBody(authController, connectivityController)),
+        child: Obx(() {
+          if (authController.isLoading.value) {
+            return const LoadingView();
+          }
+          // We no longer depend on shouldShowDialog here; dialogs are driven from controllers.
+          return HomeContent(connectivityController: connectivityController);
+        }),
       ),
     );
   }
-
-  Widget _buildBody(AuthController authController, ConnectivityController connectivityController) {
-    if (authController.isLoading.value) {
-      return const LoadingView();
-    }
-
-    if (authController.userController.shouldShowDialog.value) {
-      return const ProfileIncompleteView();
-    }
-
-    return HomeContent(connectivityController: connectivityController);
-  }
 }
 
-// Separate loading view for better readability
 class LoadingView extends StatelessWidget {
   const LoadingView({super.key});
 
@@ -49,39 +41,17 @@ class LoadingView extends StatelessWidget {
         children: [
           CircularProgressIndicator(),
           SizedBox(height: 16),
-          Text(
-            'Loading your profile...',
-            style: TextStyle(fontSize: 16, color: Colors.grey),
-          ),
+          Text('Loading your profile...', style: TextStyle(fontSize: 16, color: Colors.grey)),
         ],
       ),
     );
   }
 }
 
-// Separate profile incomplete view
-class ProfileIncompleteView extends StatelessWidget {
-  const ProfileIncompleteView({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Text(
-        'Please Accept Policy to continue',
-        style: TextStyle(fontSize: 16, color: Colors.grey),
-      ),
-    );
-  }
-}
-
-// Main home content widget
 class HomeContent extends StatelessWidget {
   final ConnectivityController connectivityController;
 
-  const HomeContent({
-    super.key,
-    required this.connectivityController,
-  });
+  const HomeContent({super.key, required this.connectivityController});
 
   @override
   Widget build(BuildContext context) {
@@ -95,7 +65,7 @@ class HomeContent extends StatelessWidget {
           _buildAnnouncementsSection(),
           const SizedBox(height: 30),
           _buildSocialMediaSection(),
-          const SizedBox(height: 16,)
+          const SizedBox(height: 16),
         ],
       ),
     );
@@ -103,10 +73,7 @@ class HomeContent extends StatelessWidget {
 
   Widget _buildOfflineBanner() {
     return Obx(() {
-      if (connectivityController.isOnline.value) {
-        return const SizedBox.shrink();
-      }
-
+      if (connectivityController.isOnline.value) return const SizedBox.shrink();
       return const OfflineBanner();
     });
   }
@@ -125,14 +92,10 @@ class HomeContent extends StatelessWidget {
   }
 
   Widget _buildAnnouncementsSection() {
-    return Obx(() => AnnouncementsSection(
-      isOnline: connectivityController.isOnline.value,
-    ));
+    return Obx(() => AnnouncementsSection(isOnline: connectivityController.isOnline.value));
   }
 
   Widget _buildSocialMediaSection() {
-    return Obx(() => SocialMediaSection(
-      isOnline: connectivityController.isOnline.value,
-    ));
+    return Obx(() => SocialMediaSection(isOnline: connectivityController.isOnline.value));
   }
 }
