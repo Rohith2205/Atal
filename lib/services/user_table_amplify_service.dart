@@ -4,8 +4,28 @@ import 'package:amplify_flutter/amplify_flutter.dart';
 import '../models/UserTable.dart';
 
 class UserTableAmplifyService {
-  // Private method using ModelIdentifier for direct gets
-  static Future<UserTable?> _getUserById(String userId) async {
+  // ---------- Core: strong read with retries ----------
+  static Future<UserTable?> _getUserByIdStrong(
+      String userId, {
+        int maxAttempts = 5,
+        Duration initialDelay = const Duration(milliseconds: 200),
+      }) async {
+    Duration delay = initialDelay;
+    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+      final user = await _getUserByIdOnce(userId);
+      if (user != null) return user;
+
+      if (attempt < maxAttempts) {
+        await Future.delayed(delay);
+        // simple backoff
+        delay = Duration(milliseconds: (delay.inMilliseconds * 1.6).round());
+      }
+    }
+    return null;
+  }
+
+  // Single GET by ModelIdentifier (stronger than list)
+  static Future<UserTable?> _getUserByIdOnce(String userId) async {
     try {
       final modelId = UserTableModelIdentifier(id: userId);
       final request = ModelQueries.get<UserTable>(
@@ -26,10 +46,15 @@ class UserTableAmplifyService {
     }
   }
 
-  /// Check if user has accepted the policy (optimized version)
+  /// Public: Get user by ID (defaults to strong read with retry)
+  static Future<UserTable?> getUserById(String userId) async {
+    return _getUserByIdStrong(userId);
+  }
+
+  /// Check if user has accepted the policy
   static Future<bool?> isPolicyAccepted(String userId) async {
     try {
-      final user = await _getUserById(userId);
+      final user = await _getUserByIdStrong(userId);
       return user?.isPolicy;
     } catch (e) {
       safePrint('Policy check exception: $e');
@@ -37,47 +62,17 @@ class UserTableAmplifyService {
     }
   }
 
-  /// Get user by ID (FIXED: Handle empty list properly)
-  static Future<UserTable?> getUserById(String userId) async {
-    try {
-      final queryPredicate = UserTable.ID.eq(userId);
-      final request = ModelQueries.list<UserTable>(
-        UserTable.classType,
-        limit: 1,
-        where: queryPredicate,
-        authorizationMode: APIAuthorizationType.userPools,
-      );
-      final response = await Amplify.API.query(request: request).response;
-
-      if (response.hasErrors) {
-        safePrint("List user errors: ${response.errors}");
-        return null;
-      }
-
-      // FIXED: Check if items exist before accessing first
-      final items = response.data?.items;
-      if (items == null || items.isEmpty) {
-        safePrint("No user found with ID: $userId");
-        return null;
-      }
-
-      return items.first;
-    } catch (e) {
-      safePrint('List user exception: $e');
-      return null;
-    }
-  }
-
-  /// Update user policy acceptance status (IMPROVED: Better error handling)
+  /// Update user policy acceptance status
   static Future<bool> updatePolicy(String userId) async {
     try {
       safePrint("Attempting to update policy for user: $userId");
 
-      // Use the more efficient _getUserById method
-      final user = await _getUserById(userId);
+      // Use strong get with retries to avoid missing the item
+      final user = await _getUserByIdStrong(userId);
       if (user == null) {
         safePrint("User not found for policy update: $userId");
         return false;
+        // If this happens regularly, ensure your UserTable.id == Cognito sub.
       }
 
       safePrint("Found user: ${user.name}, current policy status: ${user.isPolicy}");
@@ -94,6 +89,8 @@ class UserTableAmplifyService {
         return false;
       }
 
+      // Optional: confirm write
+      await _getUserByIdStrong(userId);
       safePrint("Policy update successful for user: $userId");
       return response.data != null;
     } catch (e) {
@@ -102,7 +99,7 @@ class UserTableAmplifyService {
     }
   }
 
-  /// Create a new user
+  /// Create a new user (then confirm with a strong read)
   static Future<UserTable?> createUser(UserTable user) async {
     try {
       final request = ModelMutations.create(
@@ -115,14 +112,17 @@ class UserTableAmplifyService {
         safePrint("Create user errors: ${response.errors}");
         return null;
       }
-      return response.data;
+
+      // Confirm presence (handles eventual consistency)
+      final confirmed = await _getUserByIdStrong(user.id);
+      return confirmed ?? response.data;
     } catch (e) {
       safePrint('Create user exception: $e');
       return null;
     }
   }
 
-  /// Update user information
+  /// Update user information (then confirm with a strong read)
   static Future<UserTable?> updateUser(UserTable user) async {
     try {
       final request = ModelMutations.update(
@@ -135,7 +135,10 @@ class UserTableAmplifyService {
         safePrint("Update user errors: ${response.errors}");
         return null;
       }
-      return response.data;
+
+      // Confirm presence (handles eventual consistency)
+      final confirmed = await _getUserByIdStrong(user.id);
+      return confirmed ?? response.data;
     } catch (e) {
       safePrint('Update user exception: $e');
       return null;
@@ -145,7 +148,7 @@ class UserTableAmplifyService {
   /// Delete user
   static Future<bool> deleteUser(String userId) async {
     try {
-      final user = await getUserById(userId);
+      final user = await _getUserByIdStrong(userId);
       if (user == null) return false;
 
       final request = ModelMutations.delete(
@@ -177,13 +180,13 @@ class UserTableAmplifyService {
     );
   }
 
-  /// Check if user exists
+  /// Existence check (strong)
   static Future<bool> userExists(String userId) async {
-    final user = await _getUserById(userId);
+    final user = await _getUserByIdStrong(userId);
     return user != null;
   }
 
-  /// Get users by university
+  /// Example filter by university (unchanged; list is fine here)
   static Future<List<UserTable>> getUsersByUniversity(String university) async {
     try {
       final queryPredicate = UserTable.UNIVERSITY.eq(university);
@@ -205,13 +208,12 @@ class UserTableAmplifyService {
     }
   }
 
-  /// Get users who haven't accepted policy
+  /// Users who haven't accepted policy (list is appropriate here)
   static Future<List<UserTable>> getUsersWithoutPolicyAcceptance() async {
     try {
-      final queryPredicate = UserTable.ISPOLICY.eq(false);
       final request = ModelQueries.list<UserTable>(
         UserTable.classType,
-        where: queryPredicate,
+        where: UserTable.ISPOLICY.eq(false),
         authorizationMode: APIAuthorizationType.userPools,
       );
       final response = await Amplify.API.query(request: request).response;
