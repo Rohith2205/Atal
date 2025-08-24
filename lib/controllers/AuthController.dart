@@ -2,31 +2,30 @@ import 'package:amplify_flutter/amplify_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
 import '../components/personaldetails.dart';
+import '../screens/PolicyScreen.dart';
 import 'ConnectivityController.dart';
 import 'UserTableController.dart';
 import '../utils/routes.dart';
 
 class AuthController extends GetxController {
-  // Observable properties
   final RxBool isLoading = true.obs;
   final RxBool isAuthenticated = false.obs;
   final RxString authError = ''.obs;
   final RxString _userId = ''.obs;
   final RxBool isNewUser = false.obs;
 
-  // Add this flag to track if personal details flow has been completed in this session
   final RxBool _hasCompletedPersonalDetailsFlow = false.obs;
-
-  // Add flag to prevent multiple dialog shows
   final RxBool _isDialogShowing = false.obs;
   static const Duration _dialogCloseDelay = Duration(milliseconds: 300);
 
-  // Dependencies
+  // Prevent duplicate concurrent status resolutions
+  final RxBool _resolvingStatus = false.obs;
+
   late UserController _userController;
   late ConnectivityController _connectivityController;
 
-  // Add this getter to expose the user ID
   String? get userId => _userId.value.isNotEmpty ? _userId.value : null;
 
   @override
@@ -38,19 +37,13 @@ class AuthController extends GetxController {
 
   Future _initializeController() async {
     try {
-      // Initialize connectivity first
       _connectivityController = Get.put(ConnectivityController(), permanent: true);
       await _connectivityController.onInitialized;
 
-      // Initialize user controller
       _userController = Get.put(UserController(), permanent: true);
-
-      // Wait for user controller to be ready
       await _userController.onReady();
 
-      // Check authentication status
       await _checkAuthenticationStatus();
-
     } catch (e) {
       authError.value = 'Failed to initialize authentication';
       safePrint('Auth initialization error: $e');
@@ -59,7 +52,6 @@ class AuthController extends GetxController {
     }
   }
 
-  // Listen to Amplify Auth state changes
   void _listenToAuthChanges() {
     Amplify.Hub.listen(HubChannel.Auth, (hubEvent) {
       switch (hubEvent.eventName) {
@@ -80,182 +72,110 @@ class AuthController extends GetxController {
   }
 
   Future<void> _handleSignIn() async {
-    safePrint('User signed in - checking user status');
-
-    // Prevent multiple simultaneous sign-in handling
-    if (isLoading.value) {
-      safePrint('Already processing sign in, skipping...');
-      return;
-    }
-
-    // Add a small delay to ensure any signup redirects complete first
-    await Future.delayed(const Duration(milliseconds: 100));
-
+    if (isLoading.value || _resolvingStatus.value) return;
     isLoading.value = true;
+    _resolvingStatus.value = true;
 
     try {
-      await _fetchCognitoUserAttributes();
-
-      // Check user status with improved logic
-      final userStatus = await _checkUserStatus();
+      await _fetchCognitoUserAttributes();      // 1) seed basics
+      await _userController.loadFullUserData(); // 2) pull server truth
+      final status = await _checkUserStatus();  // 3) decide from truth
 
       isAuthenticated.value = true;
-
-      // Handle different user statuses
-      await _handleUserStatus(userStatus);
-
+      await _handleUserStatus(status);
     } catch (e) {
       safePrint('Error handling sign in: $e');
       authError.value = 'Failed to process sign in';
     } finally {
+      _resolvingStatus.value = false;
       isLoading.value = false;
     }
   }
 
-  // NEW: Separate method to handle user status
   Future<void> _handleUserStatus(UserStatus userStatus) async {
     switch (userStatus) {
       case UserStatus.needsPersonalDetails:
-        safePrint('User needs personal details - showing dialog');
         isNewUser.value = true;
-
-        // Small delay to ensure UI is ready, then show dialog
-        Future.delayed(const Duration(milliseconds: 500), () {
-          _showPersonalDetailsDialog();
-        });
+        Future.delayed(const Duration(milliseconds: 200), _showPersonalDetailsDialog);
         break;
 
       case UserStatus.needsPolicy:
-        safePrint('User needs policy acceptance');
         isNewUser.value = false;
-        // Policy dialog will be handled by UserController
-        // Just navigate to home for now
-        if (Get.currentRoute != Routes.HOME) {
-          Get.offAllNamed(Routes.HOME);
-        }
+        if (Get.currentRoute != Routes.HOME) Get.offAllNamed(Routes.HOME);
+        Future.delayed(const Duration(milliseconds: 150), showPolicyDialogNow);
         break;
 
       case UserStatus.complete:
-        safePrint('User is complete - navigating to home');
         isNewUser.value = false;
-        if (Get.currentRoute != Routes.HOME) {
-          Get.offAllNamed(Routes.HOME);
-        }
+        if (Get.currentRoute != Routes.HOME) Get.offAllNamed(Routes.HOME);
         break;
     }
   }
 
-  // Enhanced user status checking with better error handling
   Future<UserStatus> _checkUserStatus() async {
     try {
-      safePrint('Checking user status...');
+      if (_userId.value.isEmpty) return UserStatus.needsPersonalDetails;
 
-      // Ensure we have a valid user ID
-      if (_userId.value.isEmpty) {
-        safePrint('User ID is empty - needs personal details');
-        return UserStatus.needsPersonalDetails;
-      }
+      // Make extra-sure we are fresh (prevents races)
+      await _userController.refreshUserData();
 
-      // Load user data and wait for completion
-      await _userController.loadFullUserData();
+      final registered = await _userController.isUserRegistered();
+      if (!registered) return UserStatus.needsPersonalDetails;
 
-      // Add extra delay to ensure data is fully loaded
-      await Future.delayed(const Duration(milliseconds: 500));
+      final hasDetails = await _userController.hasCompletedPersonalDetails();
+      if (!hasDetails) return UserStatus.needsPersonalDetails;
 
-      // Check if user is registered in database
-      final isRegistered = await _userController.isUserRegistered();
-      safePrint('User registered in database: $isRegistered');
-
-      if (!isRegistered) {
-        safePrint('User not found in database - needs personal details');
-        return UserStatus.needsPersonalDetails;
-      }
-
-      // Check if personal details are complete
-      final hasPersonalDetails = await _userController.hasCompletedPersonalDetails();
-      safePrint('User has completed personal details: $hasPersonalDetails');
-
-      if (!hasPersonalDetails) {
-        safePrint('User exists but missing personal details');
-        return UserStatus.needsPersonalDetails;
-      }
-
-      // Check policy acceptance
-      final isPolicyAccepted = await _userController.checkPolicyStatus();
-      safePrint('User has accepted policy: $isPolicyAccepted');
-
-      if (!isPolicyAccepted) {
-        safePrint('User has personal details but policy not accepted');
-        return UserStatus.needsPolicy;
-      }
-
-      safePrint('User is complete - all requirements met');
-      return UserStatus.complete;
-
+      final accepted = await _userController.checkPolicyStatus();
+      return accepted ? UserStatus.complete : UserStatus.needsPolicy;
     } catch (e) {
       safePrint('Error checking user status: $e');
-      // Default to needs personal details on error
       return UserStatus.needsPersonalDetails;
     }
   }
 
   void _showPersonalDetailsDialog() {
-    // Prevent multiple dialogs from showing
-    if (_isDialogShowing.value || _hasCompletedPersonalDetailsFlow.value) {
-      safePrint('Dialog already showing or flow completed, skipping...');
-      return;
-    }
+    if (_isDialogShowing.value || _hasCompletedPersonalDetailsFlow.value) return;
+    if (Get.isDialogOpen == true) return;
+    if (Get.context == null) return;
 
-    // Check if there's already a dialog open
-    if (Get.isDialogOpen == true) {
-      safePrint('Another dialog is already open, skipping...');
-      return;
-    }
-
-    // Check if we're in the right context
-    if (Get.context == null) {
-      safePrint('No context available for dialog, skipping...');
-      return;
-    }
-
-    safePrint('Showing personal details dialog');
     _isDialogShowing.value = true;
-
     Get.dialog(
       const PersonalDetailsDialog(),
       barrierDismissible: false,
       barrierColor: Colors.black54,
-    ).then((_) {
-      // Dialog closed
-      safePrint('Personal details dialog closed');
-      _isDialogShowing.value = false;
-    }).catchError((error) {
-      safePrint('Error with personal details dialog: $error');
-      _isDialogShowing.value = false;
-    });
+    ).whenComplete(() => _isDialogShowing.value = false);
+  }
+
+  /// Public: can be called after personal-details success or on sign-in if needed.
+  void showPolicyDialogNow() {
+    if (Get.context == null) return;
+    if (Get.isDialogOpen == true) return;
+
+    Get.dialog(
+      const PolicyDialog(),
+      barrierDismissible: false,
+      barrierColor: Colors.black54,
+    );
   }
 
   Future<void> _handleSignOut() async {
-    safePrint('User signed out');
     isAuthenticated.value = false;
     isNewUser.value = false;
     _userId.value = '';
     _hasCompletedPersonalDetailsFlow.value = false;
     _isDialogShowing.value = false;
+    _resolvingStatus.value = false;
     await _userController.clearUserData();
   }
 
   Future<void> _handleSessionExpired() async {
-    safePrint('Session expired');
     isAuthenticated.value = false;
     isNewUser.value = false;
     _hasCompletedPersonalDetailsFlow.value = false;
     _isDialogShowing.value = false;
+    _resolvingStatus.value = false;
 
-    // Close any open dialogs
-    if (Get.isDialogOpen == true) {
-      Get.back();
-    }
+    if (Get.isDialogOpen == true) Get.back();
 
     Get.snackbar(
       'Session Expired',
@@ -267,32 +187,24 @@ class AuthController extends GetxController {
   }
 
   Future<void> _handleUserDeleted() async {
-    safePrint('User deleted');
     isAuthenticated.value = false;
     isNewUser.value = false;
     _hasCompletedPersonalDetailsFlow.value = false;
     _isDialogShowing.value = false;
+    _resolvingStatus.value = false;
     await _userController.clearUserData();
   }
 
   Future<void> _checkAuthenticationStatus() async {
     try {
       final session = await Amplify.Auth.fetchAuthSession();
-
       if (session.isSignedIn) {
         await _fetchCognitoUserAttributes();
+        await _userController.loadFullUserData();
 
-        // Check user status
-        final userStatus = await _checkUserStatus();
+        final status = await _checkUserStatus();
         isAuthenticated.value = true;
-
-        // Handle user status, but only show dialog if not loading
-        if (!isLoading.value) {
-          await _handleUserStatus(userStatus);
-        }
-
-        safePrint("User authenticated: ${_userController.userName.value} (${_userController.userId.value})");
-        safePrint("User status: $userStatus");
+        if (!isLoading.value) await _handleUserStatus(status);
       } else {
         isAuthenticated.value = false;
         _hasCompletedPersonalDetailsFlow.value = false;
@@ -306,80 +218,58 @@ class AuthController extends GetxController {
 
   Future _fetchCognitoUserAttributes() async {
     try {
-      final attributes = await Amplify.Auth.fetchUserAttributes();
+      final attrs = await Amplify.Auth.fetchUserAttributes();
 
-      // Extract user information from Cognito attributes
-      final email = _getAttributeValue(attributes, 'email');
-      final phoneNumber = _getAttributeValue(attributes, 'phone_number');
-      final name = _getAttributeValue(attributes, 'name');
-      final userId = _getAttributeValue(attributes, 'sub');
+      final email = _getAttributeValue(attrs, 'email');
+      final phone = _getAttributeValue(attrs, 'phone_number');
+      final name  = _getAttributeValue(attrs, 'name');
+      final sub   = _getAttributeValue(attrs, 'sub');
 
-      // Store the user ID
-      _userId.value = userId;
+      _userId.value = sub; // PK of your UserTable row
 
-      // Update user controller with basic info
       await _userController.setUserBasicInfo(
         name: name,
         emailAddress: email,
-        phone: phoneNumber,
-        id: userId,
+        phone: phone,
+        id: sub,
       );
-
-      safePrint('Cognito attributes loaded successfully');
     } catch (e) {
       authError.value = 'Failed to load user attributes';
-      if (kDebugMode) {
-        print('Error fetching user attributes: $e');
-      }
+      if (kDebugMode) print('Error fetching user attributes: $e');
     }
   }
 
-  String _getAttributeValue(List<AuthUserAttribute> attributes, String key) {
+  String _getAttributeValue(List<AuthUserAttribute> attrs, String key) {
     try {
-      return attributes.firstWhere((attr) => attr.userAttributeKey.key == key).value;
-    } catch (e) {
-      if (kDebugMode) {
-        print('Attribute $key not found');
-      }
+      return attrs.firstWhere((a) => a.userAttributeKey.key == key).value;
+    } catch (_) {
       return '';
     }
   }
 
-  // Called when personal details are successfully submitted
-  // Updated method in AuthController
+  /// Called when personal details are saved successfully
   Future<void> onPersonalDetailsCompleted() async {
     try {
-      safePrint('Personal details completed');
-
-      // Update authentication and flow states first
       isNewUser.value = false;
       isAuthenticated.value = true;
       _hasCompletedPersonalDetailsFlow.value = true;
 
-      // Handle dialog closing more explicitly
       await _closeAnyOpenDialogs();
 
-      // Check if user still needs policy acceptance
-      final userStatus = await _checkUserStatus();
-
-      if (userStatus == UserStatus.needsPolicy) {
-        // Navigate to home where ProfileIncompleteView will show
+      // Don’t wait for read-after-write to settle. Open policy now.
+      if (Get.currentRoute != Routes.HOME) {
         Get.offAllNamed(Routes.HOME);
-
-        // Show message about policy
-
-      } else {
-        // Navigate to home screen (complete flow)
-        Get.offAllNamed(Routes.HOME);
-
-        // Show success message after navigation
-        _showSuccessMessage();
+        await Future.delayed(const Duration(milliseconds: 150));
       }
+      showPolicyDialogNow();
 
-    } catch (e, stackTrace) {
-      await _handleCompletionError(e, stackTrace);
+      // In the background, hydrate server truth with a few retries
+      await _userController.refreshUserDataWithRetry();
+    } catch (e, st) {
+      await _handleCompletionError(e, st);
     }
   }
+
   Future<void> _closeAnyOpenDialogs() async {
     if (Get.isDialogOpen == true) {
       Get.back();
@@ -388,22 +278,8 @@ class AuthController extends GetxController {
     _isDialogShowing.value = false;
   }
 
-  void _showSuccessMessage() {
-    Get.snackbar(
-      'Profile Complete',
-      'Welcome! Your profile has been set up successfully.',
-      snackPosition: SnackPosition.TOP,
-      backgroundColor: Colors.green.shade100,
-      colorText: Colors.green.shade700,
-      icon: const Icon(Icons.check_circle, color: Colors.green),
-    );
-  }
-
-  Future<void> _handleCompletionError(dynamic error, StackTrace stackTrace) async {
+  Future<void> _handleCompletionError(dynamic error, StackTrace st) async {
     safePrint('Error completing personal details: $error');
-    safePrint('Stack trace: $stackTrace');
-
-    // Reset states on error
     _isDialogShowing.value = false;
     _hasCompletedPersonalDetailsFlow.value = false;
 
@@ -417,23 +293,17 @@ class AuthController extends GetxController {
     );
   }
 
-  // Called when policy is accepted
+  /// Called after pressing “I Agree”
   Future<void> onPolicyAccepted() async {
     try {
-      safePrint('Policy accepted - redirecting to home');
+      _userController.isPolicyAccepted.value = true;
+      await _userController.persistCache();      // persist locally
+      await _userController.refreshUserDataWithRetry(); // pull server truth with retry
 
-      // Close any open dialogs
-      if (Get.isDialogOpen == true) {
-        Get.back();
-      }
-
-      // Small delay before navigation to ensure dialog is closed
-      await Future.delayed(const Duration(milliseconds: 200));
-
-      // Navigate directly to home screen
+      if (Get.isDialogOpen == true) Get.back();
+      await Future.delayed(const Duration(milliseconds: 100));
       Get.offAllNamed(Routes.HOME);
 
-      // Show success message
       Get.snackbar(
         'Welcome!',
         'You can now access all features of the app.',
@@ -447,411 +317,17 @@ class AuthController extends GetxController {
     }
   }
 
-  // Rest of your methods remain the same...
-  // (signUp, confirmSignUp, signIn, signOut, etc.)
-
-  // SIGNUP IMPLEMENTATION
-  Future<bool> signUp({
-    required String email,
-    required String password,
-    required String name,
-    String? phoneNumber,
-  }) async {
-    try {
-      isLoading.value = true;
-      authError.value = '';
-
-      safePrint('Starting signup process for: $email');
-
-      // Prepare user attributes
-      Map<AuthUserAttributeKey, String> userAttributes = {
-        AuthUserAttributeKey.email: email,
-        AuthUserAttributeKey.name: name,
-      };
-
-      // Add phone number if provided
-      if (phoneNumber != null && phoneNumber.isNotEmpty) {
-        userAttributes[AuthUserAttributeKey.phoneNumber] = phoneNumber;
-      }
-
-      // Sign up with Amplify
-      final result = await Amplify.Auth.signUp(
-        username: email,
-        password: password,
-        options: SignUpOptions(
-          userAttributes: userAttributes,
-        ),
-      );
-
-      safePrint('Signup result: ${result.isSignUpComplete}');
-
-      if (result.isSignUpComplete) {
-        // User is immediately confirmed (rare case)
-        safePrint('Signup completed immediately - redirecting to login');
-
-        // Redirect to login page
-        Get.offAllNamed(Routes.LOGIN);
-
-        // Show success message
-        Get.snackbar(
-          'Account Created Successfully',
-          'Your account has been created. Please sign in with your credentials.',
-          snackPosition: SnackPosition.TOP,
-          backgroundColor: Colors.green.shade100,
-          colorText: Colors.green.shade700,
-          icon: const Icon(Icons.check_circle, color: Colors.green),
-          duration: const Duration(seconds: 4),
-        );
-
-        return true;
-      } else {
-        // Most common case - email confirmation required
-        safePrint('Signup requires email confirmation');
-
-        // Check if you have a confirmation screen, otherwise go to login
-        if (Routes.CONFIRM_EMAIL.isNotEmpty) {
-          // Navigate to email confirmation screen
-          Get.offNamed(Routes.CONFIRM_EMAIL, arguments: {
-            'email': email,
-            'fromSignup': true,
-          });
-        } else {
-          // No confirmation screen - go to login
-          Get.offAllNamed(Routes.LOGIN);
-        }
-
-        Get.snackbar(
-          'Verification Required',
-          'Please check your email and click the verification link, then sign in.',
-          snackPosition: SnackPosition.TOP,
-          backgroundColor: Colors.blue.shade100,
-          colorText: Colors.blue.shade700,
-          icon: const Icon(Icons.email, color: Colors.blue),
-          duration: const Duration(seconds: 5),
-        );
-
-        return true; // Return true as signup was successful, just needs confirmation
-      }
-
-    } on AuthException catch (e) {
-      // Handle specific Amplify Auth errors
-      String errorMessage = _getAuthErrorMessage(e);
-      authError.value = errorMessage;
-      safePrint('Signup Auth error: ${e.message}');
-
-      Get.snackbar(
-        'Signup Failed',
-        errorMessage,
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red.shade100,
-        colorText: Colors.red.shade700,
-        icon: const Icon(Icons.error, color: Colors.red),
-        duration: const Duration(seconds: 4),
-      );
-
-      return false;
-
-    } catch (e) {
-      // Handle other errors
-      authError.value = 'An unexpected error occurred during signup';
-      safePrint('Signup general error: $e');
-
-      Get.snackbar(
-        'Signup Failed',
-        'An unexpected error occurred. Please try again.',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red.shade100,
-        colorText: Colors.red.shade700,
-        icon: const Icon(Icons.error, color: Colors.red),
-      );
-
-      return false;
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  // Helper method to get user-friendly error messages
-  String _getAuthErrorMessage(AuthException e) {
-    switch (e.message.toLowerCase()) {
-      case 'user already exists':
-      case 'an account with the given email already exists':
-        return 'An account with this email already exists. Please sign in instead.';
-      case 'password did not conform with policy':
-        return 'Password is too weak. Please use a stronger password.';
-      case 'invalid email address format':
-        return 'Please enter a valid email address.';
-      case 'username/client id combination not found':
-        return 'Invalid email format. Please check and try again.';
-      default:
-        return e.message.isNotEmpty ? e.message : 'Failed to create account. Please try again.';
-    }
-  }
-
-  // Email confirmation method
-  Future<bool> confirmSignUp({
-    required String email,
-    required String confirmationCode,
-  }) async {
-    try {
-      isLoading.value = true;
-      authError.value = '';
-
-      safePrint('Confirming signup for: $email');
-
-      final result = await Amplify.Auth.confirmSignUp(
-        username: email,
-        confirmationCode: confirmationCode,
-      );
-
-      if (result.isSignUpComplete) {
-        safePrint('Email confirmation successful');
-
-        // Redirect to login page
-        Get.offAllNamed(Routes.LOGIN);
-
-        Get.snackbar(
-          'Email Verified',
-          'Your email has been verified. Please sign in with your credentials.',
-          snackPosition: SnackPosition.TOP,
-          backgroundColor: Colors.green.shade100,
-          colorText: Colors.green.shade700,
-          icon: const Icon(Icons.check_circle, color: Colors.green),
-          duration: const Duration(seconds: 4),
-        );
-
-        return true;
-      } else {
-        authError.value = 'Email confirmation failed';
-        return false;
-      }
-
-    } on AuthException catch (e) {
-      String errorMessage = _getConfirmationErrorMessage(e);
-      authError.value = errorMessage;
-      safePrint('Confirmation error: ${e.message}');
-
-      Get.snackbar(
-        'Verification Failed',
-        errorMessage,
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red.shade100,
-        colorText: Colors.red.shade700,
-        icon: const Icon(Icons.error, color: Colors.red),
-      );
-
-      return false;
-    } catch (e) {
-      authError.value = 'Failed to verify email';
-      safePrint('Confirmation general error: $e');
-      return false;
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  // Helper method for confirmation error messages
-  String _getConfirmationErrorMessage(AuthException e) {
-    switch (e.message.toLowerCase()) {
-      case 'invalid verification code provided':
-        return 'Invalid verification code. Please check and try again.';
-      case 'code mismatch':
-        return 'Verification code is incorrect. Please try again.';
-      case 'expired code':
-        return 'Verification code has expired. Please request a new one.';
-      default:
-        return e.message.isNotEmpty ? e.message : 'Failed to verify email. Please try again.';
-    }
-  }
-
-  // Resend confirmation code
-  Future<bool> resendConfirmationCode(String email) async {
-    try {
-      isLoading.value = true;
-
-      await Amplify.Auth.resendSignUpCode(username: email);
-
-      Get.snackbar(
-        'Code Sent',
-        'A new verification code has been sent to your email.',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.blue.shade100,
-        colorText: Colors.blue.shade700,
-        icon: const Icon(Icons.email, color: Colors.blue),
-      );
-
-      return true;
-    } catch (e) {
-      safePrint('Resend code error: $e');
-
-      Get.snackbar(
-        'Failed to Resend',
-        'Could not send verification code. Please try again.',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red.shade100,
-        colorText: Colors.red.shade700,
-      );
-
-      return false;
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  // SIGN IN METHOD
-  Future<bool> signIn({
-    required String email,
-    required String password,
-  }) async {
-    try {
-      isLoading.value = true;
-      authError.value = '';
-
-      safePrint('Starting sign in process for: $email');
-
-      final result = await Amplify.Auth.signIn(
-        username: email,
-        password: password,
-      );
-
-      if (result.isSignedIn) {
-        safePrint('Sign in successful');
-        // The Hub listener will handle the rest
-        return true;
-      } else {
-        // Handle additional steps if needed (MFA, etc.)
-        safePrint('Sign in requires additional steps');
-        authError.value = 'Additional authentication steps required';
-        return false;
-      }
-
-    } on AuthException catch (e) {
-      String errorMessage = _getSignInErrorMessage(e);
-      authError.value = errorMessage;
-      safePrint('Sign in Auth error: ${e.message}');
-
-      Get.snackbar(
-        'Sign In Failed',
-        errorMessage,
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red.shade100,
-        colorText: Colors.red.shade700,
-        icon: const Icon(Icons.error, color: Colors.red),
-      );
-
-      return false;
-
-    } catch (e) {
-      authError.value = 'An unexpected error occurred during sign in';
-      safePrint('Sign in general error: $e');
-
-      Get.snackbar(
-        'Sign In Failed',
-        'An unexpected error occurred. Please try again.',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red.shade100,
-        colorText: Colors.red.shade700,
-        icon: const Icon(Icons.error, color: Colors.red),
-      );
-
-      return false;
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  // Helper method for sign in error messages
-  String _getSignInErrorMessage(AuthException e) {
-    switch (e.message.toLowerCase()) {
-      case 'incorrect username or password':
-      case 'user does not exist':
-        return 'Invalid email or password. Please check your credentials.';
-      case 'user is not confirmed':
-        return 'Please verify your email address before signing in.';
-      case 'password reset required':
-        return 'Password reset is required. Please check your email.';
-      case 'user is disabled':
-        return 'Your account has been disabled. Please contact support.';
-      case 'too many failed attempts':
-        return 'Too many failed attempts. Please try again later.';
-      default:
-        return e.message.isNotEmpty ? e.message : 'Failed to sign in. Please try again.';
-    }
-  }
-
-  // Public sign out method
-  Future<bool> signOut() async {
-    try {
-      isLoading.value = true;
-
-      // Close any open dialogs
-      if (Get.isDialogOpen == true) {
-        Get.back();
-      }
-
-      // Clear user data first
-      await _userController.clearUserData();
-      _userId.value = '';
-      isNewUser.value = false;
-      _hasCompletedPersonalDetailsFlow.value = false;
-      _isDialogShowing.value = false;
-
-      // Sign out from Amplify
-      await Amplify.Auth.signOut();
-
-      // Update authentication state
-      isAuthenticated.value = false;
-      authError.value = '';
-
-      return true;
-    } catch (e) {
-      authError.value = 'Failed to sign out';
-      if (kDebugMode) {
-        print('Error signing out: $e');
-      }
-      Get.snackbar(
-        'Error',
-        'Failed to sign out. Please try again.',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red.shade100,
-        colorText: Colors.red.shade700,
-      );
-      return false;
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  Future<void> refreshAuthState() async {
-    isLoading.value = true;
-    await _checkAuthenticationStatus();
-    isLoading.value = false;
-  }
-
-  // Method to manually mark personal details as completed (for testing)
-  void markPersonalDetailsCompleted() {
-    _hasCompletedPersonalDetailsFlow.value = true;
-    _isDialogShowing.value = false;
-    isNewUser.value = false;
-  }
-
-  // Getters for UI
+  // Exposed
   UserController get userController => _userController;
   ConnectivityController get connectivityController => _connectivityController;
 
-  // Computed properties
   bool get hasError => authError.value.isNotEmpty;
-  bool get isReady => !isLoading.value && !hasError;
+  bool get isReady  => !isLoading.value && !hasError;
+
   bool get shouldShowPersonalDetailsDialog =>
-      isNewUser.value &&
-          isAuthenticated.value &&
-          !_hasCompletedPersonalDetailsFlow.value &&
-          !_isDialogShowing.value;
+      isNewUser.value && isAuthenticated.value && !_hasCompletedPersonalDetailsFlow.value && !_isDialogShowing.value;
+
+  Future<void> refreshAuthState() async {}
 }
 
-// Enum to track user completion status
-enum UserStatus {
-  needsPersonalDetails,
-  needsPolicy,
-  complete,
-}
+enum UserStatus { needsPersonalDetails, needsPolicy, complete }
